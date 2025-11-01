@@ -26,15 +26,30 @@ import "./assets/scss/light-bootstrap-dashboard-react.scss?v=2.0.0";
 import "./assets/css/demo.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
+import { AuthProvider } from "./contexts/AuthProvider";
 import AdminLayout from "layouts/Admin.js";
+import Login from "auth/Login.js";
+import Callback from "auth/Callback.js";
+import ProtectedRoute from "components/ProtectedRoute.js";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 root.render(
-  <BrowserRouter>
-    <Switch>
-      <Route path="/admin" render={(props) => <AdminLayout {...props} />} />
-      <Redirect from="/" to="/admin/dashboard" />
-    </Switch>
-  </BrowserRouter>
+  <AuthProvider>
+    <BrowserRouter>
+      <Switch>
+        <Route exact path="/login" component={Login} />
+        <Route exact path="/auth/callback" component={Callback} />
+        <Route 
+          path="/admin" 
+          render={(props) => (
+            <ProtectedRoute>
+              <AdminLayout {...props} />
+            </ProtectedRoute>
+          )} 
+        />
+        <Redirect from="/" to="/login" />
+      </Switch>
+    </BrowserRouter>
+  </AuthProvider>
 );

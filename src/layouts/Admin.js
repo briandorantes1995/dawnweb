@@ -22,6 +22,7 @@ import AdminNavbar from "components/Navbars/AdminNavbar";
 import Footer from "components/Footer/Footer";
 import Sidebar from "components/Sidebar/Sidebar";
 import FixedPlugin from "components/FixedPlugin/FixedPlugin.js";
+import ProtectedRoute from "components/ProtectedRoute";
 
 import routes from "routes.js";
 
@@ -62,7 +63,7 @@ function Admin() {
     }
   }, [location]);
   return (
-    <>
+    <ProtectedRoute>
       <div className="wrapper">
         <Sidebar color={color} image={hasImage ? image : ""} routes={routes} />
         <div className="main-panel" ref={mainPanel}>
@@ -81,7 +82,7 @@ function Admin() {
         image={image}
         setImage={(image) => setImage(image)}
       />
-    </>
+    </ProtectedRoute>
   );
 }
 
