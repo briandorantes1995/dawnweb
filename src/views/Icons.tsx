@@ -1,18 +1,9 @@
 import React from "react";
 
 // react-bootstrap components
-import {
-  Badge,
-  Button,
-  Card,
-  Navbar,
-  Nav,
-  Container,
-  Row,
-  Col,
-} from "react-bootstrap";
+import {Badge,Button,Card,Navbar,Nav,Container,Row,Col,} from "react-bootstrap";
 
-function Icons() {
+const Icons: React.FC = () => {
   return (
     <>
       <Container fluid>

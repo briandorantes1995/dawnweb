@@ -1,0 +1,71 @@
+import React, { useRef, useEffect, useState } from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+
+import AdminNavbar from "../components/Navbars/AdminNavbar";
+import Footer from "../components/Footer/Footer";
+import Sidebar from "../components/Sidebar/Sidebar";
+import FixedPlugin from "../components/FixedPlugin/FixedPlugin";
+
+import routes, { DashboardRoute } from "../routes";
+
+import sidebarImage from "../assets/img/sidebar-3.jpg";
+
+const Admin: React.FC = () => {
+  const [image, setImage] = useState<string>(sidebarImage);
+  const [color, setColor] = useState<string>("black");
+  const [hasImage, setHasImage] = useState<boolean>(true);
+
+  const location = useLocation();
+  const mainPanel = useRef<HTMLDivElement | null>(null);
+
+  // Rutas relativas para React Router v6
+  const getRoutes = (routes: DashboardRoute[]) =>
+    routes
+      .filter((prop) => prop.layout === "/admin")
+      .map((prop, key) => {
+        const Component = prop.component;
+        // path relativo: quita el "/admin"
+        return <Route path={prop.path.slice(1)} element={<Component />} key={key} />;
+      });
+
+  useEffect(() => {
+    document.documentElement.scrollTop = 0;
+    document.scrollingElement!.scrollTop = 0;
+    if (mainPanel.current) mainPanel.current.scrollTop = 0;
+
+    if (window.innerWidth < 993 && document.documentElement.classList.contains("nav-open")) {
+      document.documentElement.classList.remove("nav-open");
+      const element = document.getElementById("bodyClick");
+      if (element?.parentNode) element.parentNode.removeChild(element);
+    }
+  }, [location]);
+
+  return (
+    <div className="wrapper">
+      <Sidebar color={color} image={hasImage ? image : ""} routes={routes} />
+      <div className="main-panel" ref={mainPanel}>
+        <AdminNavbar />
+        <div className="content">
+          <Routes>
+            {getRoutes(routes)}
+            <Route path="*" element={<Navigate to="dashboard" replace />} />
+          </Routes>
+        </div>
+        <Footer />
+      </div>
+
+      <FixedPlugin
+        hasImage={hasImage}
+        setHasImage={() => setHasImage(!hasImage)}
+        color={color}
+        setColor={(color: string) => setColor(color)}
+        image={image}
+        setImage={(image: string) => setImage(image)}
+      />
+    </div>
+  );
+};
+
+export default Admin;
+
+

@@ -2,61 +2,40 @@ import React from "react";
 // react plugin for creating notifications over the dashboard
 import NotificationAlert from "react-notification-alert";
 // react-bootstrap components
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Modal,
-  Navbar,
-  Nav,
-  Container,
-  Row,
-  Col,
-} from "react-bootstrap";
+import {Alert,Badge,Button,Card,Modal,Navbar,Nav,Container,Row,Col,} from "react-bootstrap";
 
-function Notifications() {
+const Notifications: React.FC = () => {
   const [showModal, setShowModal] = React.useState(false);
-  const notificationAlertRef = React.useRef(null);
-  const notify = (place) => {
-    var color = Math.floor(Math.random() * 5 + 1);
-    var type;
-    switch (color) {
-      case 1:
-        type = "primary";
-        break;
-      case 2:
-        type = "success";
-        break;
-      case 3:
-        type = "danger";
-        break;
-      case 4:
-        type = "warning";
-        break;
-      case 5:
-        type = "info";
-        break;
-      default:
-        break;
-    }
-    var options = {};
-    options = {
-      place: place,
-      message: (
+  const notificationAlertRef = React.useRef<NotificationAlert | null>(null);
+ const notify = (place: "tl" | "tc" | "tr" | "bl" | "bc" | "br") => {
+  let color = Math.floor(Math.random() * 5 + 1);
+  let type: "primary" | "success" | "danger" | "warning" | "info" = "primary";
+
+  switch (color) {
+    case 1: type = "primary"; break;
+    case 2: type = "success"; break;
+    case 3: type = "danger"; break;
+    case 4: type = "warning"; break;
+    case 5: type = "info"; break;
+  }
+
+  const options: any  = {
+    place,
+    message: (
+      <div>
         <div>
-          <div>
-            Welcome to <b>Light Bootstrap Dashboard React</b> - a beautiful
-            freebie for every web developer.
-          </div>
+          Welcome to <b>Light Bootstrap Dashboard React</b> - a beautiful freebie for every web developer.
         </div>
-      ),
-      type: type,
-      icon: "nc-icon nc-bell-55",
-      autoDismiss: 7,
-    };
-    notificationAlertRef.current.notificationAlert(options);
+      </div>
+    ),
+    type,
+    icon: "nc-icon nc-bell-55",
+    autoDismiss: 7,
   };
+
+  notificationAlertRef.current?.notificationAlert(options);
+};
+
   return (
     <>
       <div className="rna-container">
@@ -232,34 +211,34 @@ function Notifications() {
               </Row>
               <Row className="justify-content-center">
                 <Col lg="3" md="3">
-                  <Button block onClick={() => notify("tl")} variant="default">
+                  <Button className="d-block w-100" onClick={() => notify("tl")} variant="secondary">
                     Top Left
                   </Button>
                 </Col>
                 <Col lg="3" md="3">
-                  <Button block onClick={() => notify("tc")} variant="default">
+                 <Button className="d-block w-100" onClick={() => notify("tc")} variant="secondary">
                     Top Center
-                  </Button>
+                </Button>
                 </Col>
                 <Col lg="3" md="3">
-                  <Button block onClick={() => notify("tr")} variant="default">
+                 <Button className="d-block w-100" onClick={() => notify("tr")} variant="secondary">
                     Top Right
-                  </Button>
+                </Button>
                 </Col>
               </Row>
               <Row className="justify-content-center">
                 <Col lg="3" md="3">
-                  <Button block onClick={() => notify("bl")} variant="default">
+                  <Button className="d-block w-100" onClick={() => notify("bl")} variant="secondary">
                     Bottom Left
                   </Button>
                 </Col>
                 <Col lg="3" md="3">
-                  <Button block onClick={() => notify("bc")} variant="default">
+                  <Button className="d-block w-100" onClick={() => notify("bc")} variant="secondary">
                     Bottom Center
                   </Button>
                 </Col>
                 <Col lg="3" md="3">
-                  <Button block onClick={() => notify("br")} variant="default">
+                  <Button className="d-block w-100" onClick={() => notify("br")} variant="secondary">
                     Bottom Right
                   </Button>
                 </Col>

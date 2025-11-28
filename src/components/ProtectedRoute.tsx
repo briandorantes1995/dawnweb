@@ -1,9 +1,16 @@
-import React from 'react';
-import { Redirect } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthProvider';
+import React, { ReactNode } from "react";
+import { Navigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { RootState } from "../store/store"; 
 
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { user, accessToken } = useSelector((state: RootState) => state.auth);
+  const isAuthenticated = !!user && !! accessToken;
+  const isLoading = user === undefined && accessToken === undefined;
 
   if (isLoading) {
     return (
@@ -26,8 +33,9 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
+  
   if (!isAuthenticated) {
-    return <Redirect to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   return children;

@@ -1,35 +1,39 @@
-/*!
-
-=========================================================
-* Light Bootstrap Dashboard React - v2.0.1
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/light-bootstrap-dashboard-react
-* Copyright 2022 Creative Tim (https://www.creative-tim.com)
-* Licensed under MIT (https://github.com/creativetimofficial/light-bootstrap-dashboard-react/blob/master/LICENSE.md)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
-import React, { Component } from "react";
+import React  from "react";
 import { useLocation } from "react-router-dom";
 import { Navbar, Container, Nav, Dropdown, Button } from "react-bootstrap";
+import { useSelector,useDispatch } from "react-redux";
+import { RootState,AppDispatch } from "../../store/store";
+import { logoutThunk } from "../../store/auththunks";
+import { useNavigate } from "react-router-dom";
 
-import routes from "routes.js";
+
+
+import routes, { DashboardRoute } from "../../routes";
+
+interface RouteType {
+  path: string;
+  layout: string;
+  name: string;
+}
 
 function Header() {
   const location = useLocation();
+  const user = useSelector((state: RootState) => state.auth.user);
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+
   
-  const mobileSidebarToggle = (e) => {
+const handleLogout = async () => {
+  await dispatch(logoutThunk());
+  navigate("/login");
+};
+  
+  const mobileSidebarToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     document.documentElement.classList.toggle("nav-open");
     var node = document.createElement("div");
     node.id = "bodyClick";
-    node.onclick = function () {
+    node.onclick = function (this: HTMLElement) {
       this.parentElement.removeChild(this);
       document.documentElement.classList.toggle("nav-open");
     };
@@ -145,7 +149,7 @@ function Header() {
                 onClick={(e) => e.preventDefault()}
               >
                 <i className="nc-icon nc-single-02"></i>
-                <span className="no-icon">Usuario Demo</span>
+                <span className="no-icon">{user?.first_name ?? "Usuario"}</span>
               </Nav.Link>
             </Nav.Item>
             <Dropdown as={Nav.Item}>
@@ -169,21 +173,13 @@ function Header() {
                   <i className="nc-icon nc-single-02"></i>
                   Perfil
                 </Dropdown.Item>
-                <Dropdown.Item
-                  href="#pablo"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <i className="nc-icon nc-settings"></i>
-                  Configuración
-                </Dropdown.Item>
+
                 <div className="divider"></div>
-                <Dropdown.Item
-                  href="#pablo"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <i className="nc-icon nc-button-power"></i>
-                  Cerrar Sesión (Próximamente)
-                </Dropdown.Item>
+                <Dropdown.Item onClick={handleLogout}>
+                <i className="nc-icon nc-button-power"></i>
+                Cerrar Sesión
+              </Dropdown.Item>
+
               </Dropdown.Menu>
             </Dropdown>
           </Nav>

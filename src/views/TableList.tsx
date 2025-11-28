@@ -1,19 +1,9 @@
 import React from "react";
 
 // react-bootstrap components
-import {
-  Badge,
-  Button,
-  Card,
-  Navbar,
-  Nav,
-  Table,
-  Container,
-  Row,
-  Col,
-} from "react-bootstrap";
+import {Badge,Button,Card,Navbar,Nav,Table,Container,Row,Col,} from "react-bootstrap";
 
-function TableList() {
+const TableList: React.FC = () => {
   return (
     <>
       <Container fluid>
