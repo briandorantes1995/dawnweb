@@ -7,15 +7,14 @@ import FixedPlugin from "../components/FixedPlugin/FixedPlugin";
 import routes, { DashboardRoute } from "../routes";
 import sidebarImage from "../assets/img/sidebar-3.jpg";
 
-const Admin: React.FC = () => {
+const Maestro: React.FC = () => {
   const [image, setImage] = useState<string>(sidebarImage);
   const [color, setColor] = useState<string>("black");
   const [hasImage, setHasImage] = useState<boolean>(true);
   const location = useLocation();
   const mainPanel = useRef<HTMLDivElement | null>(null);
-  const adminRoutes = routes.filter((r) => r.layout === "/admin");
+  const maestroRoutes = routes.filter((r) => r.layout === "/maestro"); 
 
- 
   const getRoutes = (routes: DashboardRoute[]) =>
     routes.map((prop, key) => {
       const Component = prop.component;
@@ -39,10 +38,11 @@ const Admin: React.FC = () => {
 
   return (
     <div className="wrapper">
+      {/* 🔥 AQUÍ está la corrección: ahora solo recibe las rutas del maestro */}
       <Sidebar
         color={color}
         image={hasImage ? image : ""}
-        routes={adminRoutes}
+        routes={maestroRoutes}
       />
 
       <div className="main-panel" ref={mainPanel}>
@@ -50,8 +50,11 @@ const Admin: React.FC = () => {
 
         <div className="content">
           <Routes>
-            {getRoutes(adminRoutes)}
-            <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+            {getRoutes(maestroRoutes)}
+            <Route
+              path="*"
+              element={<Navigate to="/maestro/dashboard" replace />}
+            />
           </Routes>
         </div>
 
@@ -70,7 +73,5 @@ const Admin: React.FC = () => {
   );
 };
 
-export default Admin;
-
-
+export default Maestro;
 

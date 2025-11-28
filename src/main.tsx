@@ -14,10 +14,12 @@ import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { store, persistor } from "./store/store";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
 import AdminLayout from "./layouts/Admin";
 import Login from "./auth/Login";
+import OAuthCallback from "./auth/0AthCallback";
 import ProtectedRoute from "./components/ProtectedRoute";
+import MaestroDashboard from "./layouts/Maestro";
+import NoPermission from "./views/NoPermission";
 
 const container = document.getElementById("root");
 
@@ -32,14 +34,28 @@ root.render(
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route
-              path="/admin/*"
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
+           {/* Maestro */}
+              <Route
+                path="/admin/*"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Dueño */}
+              <Route
+                path="/master/*"
+                element={
+                  <ProtectedRoute allowedRoles={["Maestro"]}>
+                    <MaestroDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+            <Route path="/no-permission" element={<NoPermission />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>

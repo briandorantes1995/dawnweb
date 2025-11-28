@@ -5,12 +5,10 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export async function apiFetch<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  accessToken?: string,
+  refreshToken?: string
 ): Promise<T> {
-  const state = store.getState().auth;
-  let accessToken = state.accessToken;
-  let refreshToken = state.refreshToken;
-
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>)
@@ -24,7 +22,7 @@ export async function apiFetch<T>(
 
   let res = await fetch(url, { ...options, headers });
 
-  // TOKEN EXPIRED → REFRESH
+  // REFRESH TOKEN
   if (res.status === 401 && refreshToken) {
     const refreshed = await attemptRefresh(refreshToken);
 
@@ -32,7 +30,6 @@ export async function apiFetch<T>(
       headers.Authorization = `Bearer ${refreshed.accessToken}`;
       res = await fetch(url, { ...options, headers });
     } else {
-      store.dispatch(clearSession());
       throw new Error("Sesión expirada");
     }
   }

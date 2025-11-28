@@ -2,15 +2,16 @@ import React, { useState, useEffect, FormEvent } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { AppDispatch, RootState } from "../store/store";
-import { loginThunk, logoutThunk } from "../store/auththunks";
+import { loginThunk, logoutThunk,oauthLoginThunk } from "../store/auththunks";
 
 const Login: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-
-  const { user, isAuthenticated, isLoading } = useSelector(
-    (state: RootState) => state.auth
-  );
+  const { user, accessToken, loading } = useSelector(
+  (state: RootState) => state.auth
+);
+ const isAuthenticated = !!user && !!accessToken;
+ const isLoading = loading;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,7 +31,7 @@ const Login: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await dispatch(loginThunk(email, password));
+      await dispatch(loginThunk({ email, password }));
       navigate("/admin/dashboard");
     } catch (err: any) {
       setError(err.message || "Error al iniciar sesión");
@@ -69,7 +70,7 @@ const Login: React.FC = () => {
           <div className="col-md-6">
             <div className="card">
               <div className="card-body">
-                <h2 className="title text-center">Aurevia</h2>
+                <h2 className="title text-center">Fehura</h2>
 
                 {isAuthenticated && user && (
                   <div className="alert alert-success mt-3">
@@ -140,9 +141,21 @@ const Login: React.FC = () => {
                     </form>
 
                     <hr className="my-4" />
-                    <p className="text-center text-muted">
-                      O continúa con (implementa OAuth si quieres)
-                    </p>
+                   <div className="text-center">
+                  <button
+                    className="btn btn-outline-danger btn-lg btn-block"
+                    onClick={() => dispatch(oauthLoginThunk({ provider: "google" }))}
+                  >
+                    Continuar con Google
+                  </button>
+
+                  <button
+                    className="btn btn-outline-primary btn-lg btn-block mt-2"
+                    onClick={() => dispatch(oauthLoginThunk({ provider: "microsoft" }))}
+                  >
+                    Continuar con Microsoft
+                  </button>
+                </div>
                   </div>
                 )}
               </div>
