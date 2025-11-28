@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import { Nav } from "react-bootstrap";
 import { DashboardRoute } from "../../routes";
+import reactLogo from "../../assets/img/fehura_logo.png";
 
 interface SidebarProps {
   color?: string;
@@ -15,12 +16,12 @@ const Sidebar: React.FC<SidebarProps> = ({ color, image, routes }) => {
       <div className="sidebar-background" style={{ backgroundImage: `url(${image})` }} />
       <div className="sidebar-wrapper">
         <div className="logo d-flex align-items-center justify-content-start">
-          <a href="https://www.creative-tim.com?ref=lbd-sidebar" className="simple-text logo-mini mx-1">
+          <a className="simple-text logo-mini mx-1">
             <div className="logo-img">
-              <img src={require("../../assets/img/reactlogo.png")} alt="..." />
+              <img src={reactLogo} alt="..."/>
             </div>
           </a>
-          <a className="simple-text" href="http://www.creative-tim.com">Creative Tim</a>
+          <a className="simple-text">Fehura</a>
         </div>
 
         <Nav as="ul">
@@ -29,7 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ color, image, routes }) => {
             return (
               <li className={route.upgrade ? "active active-pro" : ""} key={key}>
                 <NavLink
-                  to={route.path.slice(1)}
+                    to={`${route.layout}${route.path}`}
                   className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}
                 >
                   <i className={route.icon} />

@@ -1,7 +1,7 @@
 import { store } from "../store/store";
 import { clearSession, setSession } from "../store/slices/authSlice";
 
-const API_URL = process.env.REACT_APP_API_URL || "https://dawnapi.fly.dev";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export async function apiFetch<T>(
   endpoint: string,

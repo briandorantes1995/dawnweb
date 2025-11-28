@@ -1,13 +1,47 @@
 import React from "react";
-import ChartistGraph from "react-chartist";
-
-// react-bootstrap components
-import {Badge,Button,Card,Navbar,Nav,Table,Container,Row,Col,Form,OverlayTrigger,Tooltip,} from "react-bootstrap";
+import {Badge, Button, Card, Navbar, Nav, Table, Container, Row, Col, Form, OverlayTrigger, Tooltip,} from "react-bootstrap";
+import {LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, Legend, ResponsiveContainer, CartesianGrid,} from "recharts";
 
 const Dashboard: React.FC = () => {
+  // DATASETS
+  const usersBehavior = [
+    { name: "9 AM", a: 287, b: 67, c: 23 },
+    { name: "12 AM", a: 385, b: 152, c: 113 },
+    { name: "3 PM", a: 490, b: 143, c: 67 },
+    { name: "6 PM", a: 492, b: 240, c: 108 },
+    { name: "9 PM", a: 554, b: 287, c: 190 },
+    { name: "12 PM", a: 586, b: 335, c: 239 },
+    { name: "3 AM", a: 698, b: 435, c: 307 },
+    { name: "6 AM", a: 695, b: 437, c: 308 },
+  ];
+
+  const emailStats = [
+    { name: "Open", value: 40 },
+    { name: "Bounce", value: 20 },
+    { name: "Unsubscribe", value: 40 },
+  ];
+
+  const salesData = [
+    { name: "Jan", a: 542, b: 412 },
+    { name: "Feb", a: 443, b: 243 },
+    { name: "Mar", a: 320, b: 280 },
+    { name: "Apr", a: 780, b: 580 },
+    { name: "May", a: 553, b: 453 },
+    { name: "Jun", a: 453, b: 353 },
+    { name: "Jul", a: 326, b: 300 },
+    { name: "Aug", a: 434, b: 364 },
+    { name: "Sep", a: 568, b: 368 },
+    { name: "Oct", a: 610, b: 410 },
+    { name: "Nov", a: 756, b: 636 },
+    { name: "Dec", a: 895, b: 695 },
+  ];
+
+  // COLORS
+  const pieColors = ["#17a2b8", "#dc3545", "#ffc107"];
+
   return (
-    <>
       <Container fluid>
+        {/* ==== CARDS SUPERIORES ==== */}
         <Row>
           <Col lg="3" sm="6">
             <Card className="card-stats">
@@ -118,7 +152,7 @@ const Dashboard: React.FC = () => {
           </Col>
         </Row>
 
-        {/* ===== USERS BEHAVIOR CHART ===== */}
+        {/* ==== USERS BEHAVIOR ==== */}
         <Row>
           <Col md="8">
             <Card>
@@ -128,59 +162,24 @@ const Dashboard: React.FC = () => {
               </Card.Header>
 
               <Card.Body>
-                <div className="ct-chart" id="chartHours">
-                  <ChartistGraph
-                    data={{
-                      labels: [
-                        "9:00AM",
-                        "12:00AM",
-                        "3:00PM",
-                        "6:00PM",
-                        "9:00PM",
-                        "12:00PM",
-                        "3:00AM",
-                        "6:00AM",
-                      ],
-                      series: [
-                        [287, 385, 490, 492, 554, 586, 698, 695],
-                        [67, 152, 143, 240, 287, 335, 435, 437],
-                        [23, 113, 67, 108, 190, 239, 307, 308],
-                      ],
-                    }}
-                    type="Line"
-                    options={{
-                      low: 0,
-                      high: 800,
-                      showArea: false,
-                      height: "245px",
-                      axisX: { showGrid: false },
-                      lineSmooth: true,
-                      showLine: true,
-                      showPoint: true,
-                      fullWidth: true,
-                      chartPadding: { right: 50 },
-                    }}
-                    responsiveOptions={[
-                      [
-                        "screen and (max-width: 640px)",
-                        {
-                          axisX: {
-                            labelInterpolationFnc: (value: string) =>
-                              value[0],
-                          },
-                        },
-                      ],
-                    ]}
-                  />
+                <div style={{ width: "100%", height: 300 }}>
+                  <ResponsiveContainer>
+                    <LineChart data={usersBehavior}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <ChartTooltip />
+                      <Legend />
+
+                      <Line type="monotone" dataKey="a" stroke="#17a2b8" />
+                      <Line type="monotone" dataKey="b" stroke="#dc3545" />
+                      <Line type="monotone" dataKey="c" stroke="#ffc107" />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </Card.Body>
 
               <Card.Footer>
-                <div className="legend">
-                  <i className="fas fa-circle text-info"></i> Open
-                  <i className="fas fa-circle text-danger"></i> Click
-                  <i className="fas fa-circle text-warning"></i> Click Second Time
-                </div>
                 <hr />
                 <div className="stats">
                   <i className="fas fa-history"></i> Updated 3 minutes ago
@@ -189,7 +188,7 @@ const Dashboard: React.FC = () => {
             </Card>
           </Col>
 
-          {/* ===== EMAIL STATISTICS CHART ===== */}
+          {/* ==== EMAIL STATS ==== */}
           <Col md="4">
             <Card>
               <Card.Header>
@@ -198,32 +197,39 @@ const Dashboard: React.FC = () => {
               </Card.Header>
 
               <Card.Body>
-                <div className="ct-chart ct-perfect-fourth" id="chartPreferences">
-                  <ChartistGraph
-                    data={{
-                      labels: ["40%", "20%", "40%"],
-                      series: [40, 20, 40],
-                    }}
-                    type="Pie"
-                  />
+                <div style={{ width: "100%", height: 250 }}>
+                  <ResponsiveContainer>
+                    <PieChart>
+                      <Pie
+                          data={emailStats}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          dataKey="value"
+                          label
+                      >
+                        {emailStats.map((_, i) => (
+                            <Cell key={i} fill={pieColors[i]} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
+              </Card.Body>
 
-                <div className="legend">
-                  <i className="fas fa-circle text-info"></i> Open
-                  <i className="fas fa-circle text-danger"></i> Bounce
-                  <i className="fas fa-circle text-warning"></i> Unsubscribe
-                </div>
-
+              <Card.Footer>
                 <hr />
                 <div className="stats">
                   <i className="far fa-clock"></i> Campaign sent 2 days ago
                 </div>
-              </Card.Body>
+              </Card.Footer>
             </Card>
           </Col>
         </Row>
 
-        {/* ===== SALES CHART ===== */}
+        {/* ==== SALES ==== */}
         <Row>
           <Col md="6">
             <Card>
@@ -233,55 +239,23 @@ const Dashboard: React.FC = () => {
               </Card.Header>
 
               <Card.Body>
-                <div className="ct-chart" id="chartActivity">
-                  <ChartistGraph
-                    data={{
-                      labels: [
-                        "Jan",
-                        "Feb",
-                        "Mar",
-                        "Apr",
-                        "Mai",
-                        "Jun",
-                        "Jul",
-                        "Aug",
-                        "Sep",
-                        "Oct",
-                        "Nov",
-                        "Dec",
-                      ],
-                      series: [
-                        [542, 443, 320, 780, 553, 453, 326, 434, 568, 610, 756, 895],
-                        [412, 243, 280, 580, 453, 353, 300, 364, 368, 410, 636, 695],
-                      ],
-                    }}
-                    type="Bar"
-                    options={{
-                      seriesBarDistance: 10,
-                      axisX: { showGrid: false },
-                      height: "245px",
-                    }}
-                    responsiveOptions={[
-                      [
-                        "screen and (max-width: 640px)",
-                        {
-                          seriesBarDistance: 5,
-                          axisX: {
-                            labelInterpolationFnc: (value: string) =>
-                              value[0],
-                          },
-                        },
-                      ],
-                    ]}
-                  />
+                <div style={{ width: "100%", height: 300 }}>
+                  <ResponsiveContainer>
+                    <BarChart data={salesData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <ChartTooltip />
+                      <Legend />
+
+                      <Bar dataKey="a" name="Tesla Model S" fill="#17a2b8" />
+                      <Bar dataKey="b" name="BMW 5 Series" fill="#dc3545" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </Card.Body>
 
               <Card.Footer>
-                <div className="legend">
-                  <i className="fas fa-circle text-info"></i> Tesla Model S
-                  <i className="fas fa-circle text-danger"></i> BMW 5 Series
-                </div>
                 <hr />
                 <div className="stats">
                   <i className="fas fa-check"></i> Data information certified
@@ -290,7 +264,7 @@ const Dashboard: React.FC = () => {
             </Card>
           </Col>
 
-          {/* ===== TASKS TABLE ===== */}
+          {/* ==== TASKS ==== */}
           <Col md="6">
             <Card className="card-tasks">
               <Card.Header>
@@ -302,23 +276,22 @@ const Dashboard: React.FC = () => {
                 <div className="table-full-width">
                   <Table>
                     <tbody>
-                      {/* === TASK ROWS === */}
-                      {[
-                        `Sign contract for "What are conference organizers afraid of?"`,
-                        `Lines From Great Russian Literature? Or E-mails From My Boss?`,
-                        `Flooded: One year later, assessing what was lost...`,
-                        `Create 4 Invisible User Experiences you Never Knew About`,
-                        `Read "Following makes Medium better"`,
-                        `Unfollow 5 enemies from twitter`,
-                      ].map((task, i) => (
+                    {[
+                      `Sign contract for "What are conference organizers afraid of?"`,
+                      `Lines From Great Russian Literature? Or E-mails From My Boss?`,
+                      `Flooded: One year later, assessing what was lost...`,
+                      `Create 4 Invisible User Experiences you Never Knew About`,
+                      `Read "Following makes Medium better"`,
+                      `Unfollow 5 enemies from twitter`,
+                    ].map((task, i) => (
                         <tr key={i}>
                           <td>
                             <Form.Check className="mb-1 pl-0">
                               <Form.Check.Label>
                                 <Form.Check.Input
-                                  type="checkbox"
-                                  defaultChecked={i > 0 && i < 5}
-                                  disabled={i === 5}
+                                    type="checkbox"
+                                    defaultChecked={i > 0 && i < 5}
+                                    disabled={i === 5}
                                 />
                                 <span className="form-check-sign" />
                               </Form.Check.Label>
@@ -329,31 +302,33 @@ const Dashboard: React.FC = () => {
 
                           <td className="td-actions text-right">
                             <OverlayTrigger
-                              overlay={<Tooltip id={`edit-${i}`}>Edit Task..</Tooltip>}
+                                overlay={<Tooltip id={`edit-${i}`}>Edit Task</Tooltip>}
                             >
                               <Button
-                                className="btn-simple btn-link p-1"
-                                type="button"
-                                variant="info"
+                                  className="btn-simple btn-link p-1"
+                                  type="button"
+                                  variant="info"
                               >
                                 <i className="fas fa-edit"></i>
                               </Button>
                             </OverlayTrigger>
 
                             <OverlayTrigger
-                              overlay={<Tooltip id={`remove-${i}`}>Remove..</Tooltip>}
+                                overlay={
+                                  <Tooltip id={`remove-${i}`}>Remove</Tooltip>
+                                }
                             >
                               <Button
-                                className="btn-simple btn-link p-1"
-                                type="button"
-                                variant="danger"
+                                  className="btn-simple btn-link p-1"
+                                  type="button"
+                                  variant="danger"
                               >
                                 <i className="fas fa-times"></i>
                               </Button>
                             </OverlayTrigger>
                           </td>
                         </tr>
-                      ))}
+                    ))}
                     </tbody>
                   </Table>
                 </div>
@@ -370,7 +345,6 @@ const Dashboard: React.FC = () => {
           </Col>
         </Row>
       </Container>
-    </>
   );
 };
 
