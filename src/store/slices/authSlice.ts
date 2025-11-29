@@ -1,5 +1,25 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+export interface MemberRole {
+  id: string;
+  name: string;
+  level?: number;
+  description?: string;
+  created_at?: string;
+}
+
+
+export interface MemberCompany {
+  id: string;
+  name: string;
+  legal_name?: string | null;
+  type?: string;
+  plan_id?: string | null;
+  owner_user_id?: string;
+  created_at?: string;
+  invitation_code?: string;
+}
+
 export interface Member {
   id: string;
   email: string;
@@ -8,8 +28,10 @@ export interface Member {
   pending_approval?: boolean;
   active?: boolean;
   company_id?: string;
-  roles?: string[];
+  roles: MemberRole[];
+  company?: MemberCompany;
 }
+
 
 interface AuthState {
   user: Member | null;
@@ -30,18 +52,50 @@ export const authSlice = createSlice({
   initialState,
   reducers: {
     restoreSession(state, action: PayloadAction<Partial<AuthState>>) {
-      Object.assign(state, action.payload);
+      if (action.payload.user) {
+        const user = action.payload.user;
+
+        // Normalizar roles siempre
+        const normalizedRoles = Array.isArray(user.roles)
+            ? user.roles
+            : user.roles
+                ? [user.roles]
+                : [];
+
+        state.user = {
+          ...user,
+          roles: normalizedRoles
+        };
+      }
+
+      if (action.payload.accessToken !== undefined) {
+        state.accessToken = action.payload.accessToken;
+      }
+
+      if (action.payload.refreshToken !== undefined) {
+        state.refreshToken = action.payload.refreshToken;
+      }
+
       state.loading = false;
     },
     setSession(
-      state,
-      action: PayloadAction<{
-        user: Member;
-        accessToken: string;
-        refreshToken: string;
-      }>
+        state,
+        action: PayloadAction<{
+          user: any;
+          accessToken: string;
+          refreshToken: string;
+        }>
     ) {
-      state.user = action.payload.user;
+      const user = action.payload.user;
+      const normalizedRoles = Array.isArray(user.roles)
+          ? user.roles
+          : user.roles
+              ? [user.roles]
+              : [];
+      state.user = {
+        ...user,
+        roles: normalizedRoles
+      };
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.loading = false;

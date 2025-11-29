@@ -9,37 +9,31 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { user, accessToken, loading } = useSelector(
-    (state: RootState) => state.auth
-  );
+  const { user, accessToken, loading } = useSelector((state: RootState) => state.auth);
 
-  const isAuthenticated = !!user && !!accessToken;
+  if (loading) return <div>Cargando…</div>;
+  if (!user || !accessToken) return <Navigate to="/login" replace />;
 
-  if (loading) {
-    return (
-      <div className="content text-center mt-5">
-        <div className="spinner-border text-primary" role="status"></div>
-        <p className="mt-3">Verificando autenticación…</p>
-      </div>
-    );
+  console.log("DEBUG ROUTE →", {
+    rolesInUser: user.roles,
+    allowedRoles,
+  });
+
+  if (allowedRoles) {
+    const userRole = user.roles?.[0]?.name?.toLowerCase?.() ?? null;
+
+    const hasRole = allowedRoles
+        .map((r) => r.toLowerCase())
+        .includes(userRole);
+
+    if (!hasRole) return <Navigate to="/no-permission" replace />;
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-    if (allowedRoles) {
-      const userRoles = user?.roles ?? [];
-
-      const hasRole = userRoles.some(role => allowedRoles.includes(role));
-
-      if (!hasRole) {
-        return <Navigate to="/no-permission" replace />;
-      }
-    }
   return children;
 };
 
 export default ProtectedRoute;
+
+
 
 

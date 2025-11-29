@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { Nav } from "react-bootstrap";
-import { DashboardRoute } from "../../routes";
+import { DashboardRoute } from "../../adminRoutes";
 import reactLogo from "../../assets/img/fehura_logo.png";
 
 interface SidebarProps {

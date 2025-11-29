@@ -1,5 +1,5 @@
 import { store } from "../store/store";
-import { clearSession, setSession } from "../store/slices/authSlice";
+import {setSession} from "../store/slices/authSlice";
 
 const API_URL = import.meta.env.VITE_API_URL;
 

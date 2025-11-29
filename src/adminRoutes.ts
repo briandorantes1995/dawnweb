@@ -1,3 +1,4 @@
+import React from "react";
 import Dashboard from "./views/Dashboard";
 import UserProfile from "./views/UserProfile";
 import Users from "./views/Users";
@@ -7,7 +8,7 @@ import Icons from "./views/Icons";
 import Maps from "./views/Maps";
 import Notifications from "./views/Notifications";
 
-// Tipo para cada ruta del dashboard
+
 export interface DashboardRoute {
   upgrade?: boolean;
   redirect?: boolean;
@@ -19,7 +20,7 @@ export interface DashboardRoute {
 }
 
 // Lista tipada
-const dashboardRoutes: DashboardRoute[] = [
+const adminRoutes: DashboardRoute[] = [
   {
     path: "/dashboard",
     name: "Dashboard",
@@ -78,4 +79,4 @@ const dashboardRoutes: DashboardRoute[] = [
   },
 ];
 
-export default dashboardRoutes;
+export default adminRoutes;

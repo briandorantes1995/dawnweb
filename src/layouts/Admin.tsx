@@ -4,7 +4,7 @@ import AdminNavbar from "../components/Navbars/AdminNavbar";
 import Footer from "../components/Footer/Footer";
 import Sidebar from "../components/Sidebar/Sidebar";
 import FixedPlugin from "../components/FixedPlugin/FixedPlugin";
-import routes, { DashboardRoute } from "../routes";
+import routes, { DashboardRoute } from "../adminRoutes";
 import sidebarImage from "../assets/img/sidebar-3.jpg";
 
 const Admin: React.FC = () => {

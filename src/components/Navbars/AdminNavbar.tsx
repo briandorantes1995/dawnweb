@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 
 
 
-import routes, { DashboardRoute } from "../../routes";
+import routes, { DashboardRoute } from "../../adminRoutes";
 
 interface RouteType {
   path: string;

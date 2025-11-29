@@ -28,21 +28,52 @@ export const loginThunk = createAsyncThunk(
         return rejectWithValue("Cuenta desactivada. Contacta a tu empresa.");
       }
 
-      // guardamos sesión en el slice
-      dispatch(
-        setSession({
-          user,
-          accessToken: data.token.accessToken,
-          refreshToken: data.token.refreshToken,
-        })
-      );
-
-      return user;
+        dispatch(
+            setSession({
+                user: data.user,
+                accessToken: data.token.accessToken,
+                refreshToken: data.token.refreshToken,
+            })
+        );
+        return user;
     } catch (err: any) {
       return rejectWithValue(err.message || "Error al iniciar sesión");
     }
   }
 );
+
+/**
+ * Inicia el flujo QR
+ */
+export const loginWithQrThunk = createAsyncThunk(
+    "auth/loginWithQr",
+    async (
+        { tokens, user }: { tokens: { accessToken: string; refreshToken: string }; user: any },
+        { rejectWithValue, dispatch }
+    ) => {
+        try {
+            if (user.pending_approval) {
+                return rejectWithValue("Cuenta pendiente de aprobación.");
+            }
+            if (user.active === false) {
+                return rejectWithValue("Cuenta desactivada. Contacta a tu empresa.");
+            }
+
+            dispatch(
+                setSession({
+                    user,
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
+                })
+            );
+
+            return user;
+        } catch (err: any) {
+            return rejectWithValue(err.message || "Error en QR login");
+        }
+    }
+);
+
 
 /**
  * Inicia el flujo OAuth: backend devuelve url de autorización
@@ -58,7 +89,6 @@ export const oauthLoginThunk = createAsyncThunk(
         body: JSON.stringify({ provider, redirectTo }),
       });
 
-      // redirigimos (esto no necesita mutar slice)
       window.location.href = res.url;
       return res.url;
     } catch (err: any) {
@@ -82,17 +112,14 @@ export const exchangeTokenThunk = createAsyncThunk(
         method: "POST",
         body: JSON.stringify({ code, state }),
       });
-
-      // guardamos sesión
-      dispatch(
-        setSession({
-          user: data.user,
-          accessToken: data.token.accessToken,
-          refreshToken: data.token.refreshToken,
-        })
-      );
-
-      return data.user;
+        dispatch(
+            setSession({
+                user: data.user,
+                accessToken: data.token.accessToken,
+                refreshToken: data.token.refreshToken,
+            })
+        );
+        return data.user;
     } catch (err: any) {
       return rejectWithValue(err.message || "Error intercambiando token");
     }
