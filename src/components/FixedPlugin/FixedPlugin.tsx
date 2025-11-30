@@ -1,22 +1,24 @@
 /* eslint-disable */
 import React from "react";
 import { Dropdown, Badge, Form } from "react-bootstrap";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "../../store/store";
+import {toggleMuteNotifications, setSidebarColor, setSidebarImage, setSidebarHasImage} from "../../store/slices/uiSlice";
 
-import sideBarImage1 from "../../assets/img/sidebar-1.jpg";
-import sideBarImage2 from "../../assets/img/sidebar-2.jpg";
-import sideBarImage3 from "../../assets/img/sidebar-3.jpg";
-import sideBarImage4 from "../../assets/img/sidebar-4.jpg";
+const sidebarImages = Object.values(
+    import.meta.glob("../../assets/img/background-images/*.{jpg,jpeg,png,webp,gif}", {eager: true})
+).map((mod: any) => mod.default);
 
-interface FixedPluginProps {
-  hasImage: boolean;
-  setHasImage: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  color: string;
-  setColor: (color: string) => void;
-  image: string;
-  setImage: (image: string) => void;
-}
+const FixedPlugin: React.FC = () => {
+  const dispatch = useDispatch();
 
-const FixedPlugin: React.FC<FixedPluginProps> = ({hasImage, setHasImage, color, setColor, image, setImage,}) => {
+  const {
+    sidebarHasImage,
+    sidebarColor,
+    sidebarImage,
+    muteNotifications
+  } = useSelector((s: RootState) => s.ui);
+
   return (
       <div className="fixed-plugin">
         <Dropdown>
@@ -29,74 +31,71 @@ const FixedPlugin: React.FC<FixedPluginProps> = ({hasImage, setHasImage, color, 
           </Dropdown.Toggle>
 
           <Dropdown.Menu>
-            {/* Toggle imagen de fondo */}
+            {/* Toggle Imagen */}
             <li className="adjustments-line d-flex align-items-center justify-content-between">
               <p>Background Image</p>
               <Form.Check
                   type="switch"
-                  id="custom-switch-1-image"
-                  checked={hasImage}
-                  onChange={setHasImage}
+                  checked={sidebarHasImage}
+                  onChange={(e) => dispatch(setSidebarHasImage(e.target.checked))}
               />
             </li>
 
-            {/* Filtros */}
+            {/* Silenciar notificaciones */}
+            <li className="adjustments-line d-flex align-items-center justify-content-between">
+              <p>Silenciar notificaciones</p>
+              <Form.Check
+                  type="switch"
+                  checked={muteNotifications}
+                  onChange={() => dispatch(toggleMuteNotifications())}
+              />
+            </li>
+
+            {/* Colores */}
             <li className="adjustments-line mt-3">
               <p>Filters</p>
               <div className="pull-right">
-                <Badge
-                    bg="secondary"
-                    className={color === "black" ? "active" : ""}
-                    onClick={() => setColor("black")}
-                />
-                <Badge
-                    bg="info"
-                    className={color === "azure" ? "active" : ""}
-                    onClick={() => setColor("azure")}
-                />
-                <Badge
-                    bg="success"
-                    className={color === "green" ? "active" : ""}
-                    onClick={() => setColor("green")}
-                />
-                <Badge
-                    bg="warning"
-                    className={color === "orange" ? "active" : ""}
-                    onClick={() => setColor("orange")}
-                />
-                <Badge
-                    bg="danger"
-                    className={color === "red" ? "active" : ""}
-                    onClick={() => setColor("red")}
-                />
-                <Badge
-                    bg="purple"
-                    className={color === "purple" ? "active" : ""}
-                    onClick={() => setColor("purple")}
-                />
+                {[
+                  { key: "black", bg: "secondary" },
+                  { key: "azure", bg: "info" },
+                  { key: "green", bg: "success" },
+                  { key: "orange", bg: "warning" },
+                  { key: "red", bg: "danger" },
+                  { key: "purple", bg: "purple" },
+                ].map((c) => (
+                    <Badge
+                        key={c.key}
+                        bg={c.bg as any}
+                        className={sidebarColor === c.key ? "active" : ""}
+                        onClick={() => dispatch(setSidebarColor(c.key))}
+                        style={{ cursor: "pointer" }}
+                    />
+                ))}
               </div>
               <div className="clearfix"></div>
             </li>
 
-            {/* Sidebar Images */}
+            {/* Imágenes Sidebar dinámicas */}
             <li className="header-title">Sidebar Images</li>
 
-            {[sideBarImage1, sideBarImage2, sideBarImage3, sideBarImage4].map(
-                (img, idx) => (
-                    <li key={idx} className={image === img ? "active" : ""}>
-                      <a
-                          className="img-holder switch-trigger d-block"
-                          href="#!"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setImage(img);
-                          }}
-                      >
-                        <img alt="sidebar" src={img} />
-                      </a>
-                    </li>
-                )
-            )}
+            {sidebarImages.map((img, idx) => (
+                <li
+                    key={idx}
+                    className={sidebarImage === img ? "active" : ""}
+                    style={{ cursor: "pointer" }}
+                >
+                  <a
+                      className="img-holder switch-trigger d-block"
+                      href="#!"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        dispatch(setSidebarImage(img));
+                      }}
+                  >
+                    <img alt="sidebar" src={img} />
+                  </a>
+                </li>
+            ))}
           </Dropdown.Menu>
         </Dropdown>
       </div>
@@ -104,4 +103,8 @@ const FixedPlugin: React.FC<FixedPluginProps> = ({hasImage, setHasImage, color, 
 };
 
 export default FixedPlugin;
+
+
+
+
 

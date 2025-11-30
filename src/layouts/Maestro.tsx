@@ -1,21 +1,23 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import AdminNavbar from "../components/Navbars/AdminNavbar";
 import Footer from "../components/Footer/Footer";
 import Sidebar from "../components/Sidebar/Sidebar";
 import FixedPlugin from "../components/FixedPlugin/FixedPlugin";
 import maestroRoutes, { DashboardRoute } from "../maestroRoutes";
-import sidebarImage from "../assets/img/sidebar-3.jpg";
+import { useSSENotifications } from "../hooks/useSSENotifications";
+import { useSelector} from "react-redux";
+import { RootState } from "../store/store";
 
 const Maestro: React.FC = () => {
-    const [image, setImage] = useState<string>(sidebarImage);
-    const [color, setColor] = useState<string>("black");
-    const [hasImage, setHasImage] = useState<boolean>(true);
     const location = useLocation();
     const mainPanel = useRef<HTMLDivElement | null>(null);
+    const masterRoutes = maestroRoutes.filter((r) => r.layout === "/maestro");
+    const { sidebarImage, sidebarColor, sidebarHasImage } = useSelector(
+        (s: RootState) => s.ui
+    );
 
-    // 👉 SOLO rutas del layout /master
-    const masterRoutes = maestroRoutes.filter((r) => r.layout === "/master");
+    useSSENotifications();
 
     const getRoutes = (routes: DashboardRoute[]) =>
         routes.map((prop, key) => {
@@ -41,8 +43,8 @@ const Maestro: React.FC = () => {
     return (
         <div className="wrapper">
             <Sidebar
-                color={color}
-                image={hasImage ? image : ""}
+                color={sidebarColor}
+                image={sidebarHasImage ? sidebarImage : ""}
                 routes={masterRoutes}
             />
 
@@ -52,25 +54,23 @@ const Maestro: React.FC = () => {
                 <div className="content">
                     <Routes>
                         {getRoutes(masterRoutes)}
-                        <Route path="*" element={<Navigate to="/master/dashboard" replace />} />
+                        <Route
+                            path="*"
+                            element={<Navigate to="/maestro/dashboard" replace />}
+                        />
                     </Routes>
                 </div>
 
                 <Footer />
             </div>
 
-            <FixedPlugin
-                hasImage={hasImage}
-                setHasImage={() => setHasImage(!hasImage)}
-                color={color}
-                setColor={(color: string) => setColor(color)}
-                image={image}
-                setImage={(image: string) => setImage(image)}
-            />
+            {/*Configuración visual */}
+            <FixedPlugin/>
         </div>
     );
 };
 
 export default Maestro;
+
 
 

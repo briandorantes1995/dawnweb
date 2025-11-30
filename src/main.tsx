@@ -20,6 +20,7 @@ import OAuthCallback from "./auth/0AthCallback";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Maestro from "./layouts/Maestro";
 import NoPermission from "./views/NoPermission";
+import { Toaster } from "react-hot-toast";
 
 const container = document.getElementById("root");
 
@@ -32,9 +33,11 @@ root.render(
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <BrowserRouter>
+            <Toaster position="top-right" />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />
+
               <Route
                 path="/admin/*"
                 element={

@@ -24,56 +24,56 @@ const maestroRoutes: DashboardRoute[] = [
         name: "Dashboard",
         icon: "nc-icon nc-chart-pie-35",
         component: Dashboard,
-        layout: "/master"
+        layout: "/maestro"
     },
     {
         path: "/usuarios",
         name: "Usuarios",
         icon: "nc-icon nc-circle-09",
         component: Users,
-        layout: "/master"
+        layout: "/maestro"
     },
     {
         path: "/table",
         name: "Table List",
         icon: "nc-icon nc-notes",
         component: TableList,
-        layout: "/master"
+        layout: "/maestro"
     },
     {
         path: "/typography",
         name: "Typography",
         icon: "nc-icon nc-paper-2",
         component: Typography,
-        layout: "/master"
+        layout: "/maestro"
     },
     {
         path: "/icons",
         name: "Icons",
         icon: "nc-icon nc-atom",
         component: Icons,
-        layout: "/master"
+        layout: "/maestro"
     },
     {
         path: "/maps",
         name: "Maps",
         icon: "nc-icon nc-pin-3",
         component: Maps,
-        layout: "/master"
+        layout: "/maestro"
     },
     {
         path: "/notifications",
         name: "Notifications",
         icon: "nc-icon nc-bell-55",
         component: Notifications,
-        layout: "/master"
+        layout: "/maestro"
     },
     {
         path: "/perfil",
         name: "Perfil",
         icon: "nc-icon nc-chart-pie-35",
         component: UserProfile,
-        layout: "/master"
+        layout: "/maestro"
     },
 ];
 

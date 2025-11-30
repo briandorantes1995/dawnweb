@@ -27,6 +27,12 @@ export function useApi() {
         body: JSON.stringify(body),
         headers: { "Content-Type": "application/json" },
       }),
+      patch: <T>(e: string, body?: any) =>
+          request<T>(e, {
+              method: "PATCH",
+              body: body ? JSON.stringify(body) : undefined,
+              headers: { "Content-Type": "application/json" },
+          }),
     put: <T>(e: string, body: any) =>
       request<T>(e, {
         method: "PUT",

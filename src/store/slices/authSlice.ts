@@ -27,6 +27,7 @@ export interface Member {
   last_name: string;
   pending_approval?: boolean;
   active?: boolean;
+  phone: string;
   company_id?: string;
   roles: MemberRole[];
   company?: MemberCompany;
@@ -78,14 +79,15 @@ export const authSlice = createSlice({
 
       state.loading = false;
     },
-    setSession(
-        state,
-        action: PayloadAction<{
-          user: any;
-          accessToken: string;
-          refreshToken: string;
-        }>
-    ) {
+    updateUser(state, action: PayloadAction<Partial<Member>>) {
+      if (!state.user) return;
+
+      state.user = {
+        ...state.user,
+        ...action.payload,
+      };
+    },
+    setSession(state, action: PayloadAction<{ user: any; accessToken: string; refreshToken: string; }>) {
       const user = action.payload.user;
       const normalizedRoles = Array.isArray(user.roles)
           ? user.roles
@@ -109,5 +111,5 @@ export const authSlice = createSlice({
   }
 });
 
-export const { restoreSession, setSession, clearSession } = authSlice.actions;
+export const { restoreSession, setSession, clearSession,updateUser } = authSlice.actions;
 export default authSlice.reducer;
