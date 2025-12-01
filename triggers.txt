@@ -1,0 +1,522 @@
+-- ========================================
+-- 🔥 SCRIPT DE RESET Y CONFIGURACIÓN DE BASE DE DATOS
+-- ========================================
+-- Este script resetea y configura la base de datos según schema.prisma
+-- IMPORTANTE: Este script eliminará todas las funciones RPC existentes
+-- ========================================
+
+-- ========================================
+-- 1. ELIMINAR FUNCIONES ANTIGUAS
+-- ========================================
+DROP FUNCTION IF EXISTS public.create_company_with_owner(text, text, text, text);
+DROP FUNCTION IF EXISTS public.attach_user_to_company(uuid, text, text);
+DROP FUNCTION IF EXISTS public.create_company_with_owner;
+DROP FUNCTION IF EXISTS public.attach_user_to_company;
+
+-- ========================================
+-- 2. CREAR FUNCIÓN create_company_with_owner
+-- ========================================
+-- Adaptada al schema actual: usa 'members' en lugar de 'users'
+-- Tipos de empresa válidos según enum CompanyType: 'SELLER', 'TRANSPORTER', 'BOTH'
+CREATE OR REPLACE FUNCTION public.create_company_with_owner(
+  p_name text,
+  p_type text,
+  p_auth0_sub text,
+  p_email text
+)
+RETURNS json AS $$
+DECLARE
+  v_member_id uuid;
+  v_company_id uuid;
+  v_role_name text;
+  v_role_id uuid;
+  v_plan_id uuid;
+  v_type_upper text;
+BEGIN
+  -- Convertir a mayúsculas para validación
+  v_type_upper := UPPER(TRIM(p_type));
+  
+  -- Validar tipo de empresa según enum CompanyType del schema.prisma
+  -- Los valores válidos son: SELLER, TRANSPORTER, BOTH
+  IF v_type_upper NOT IN ('SELLER', 'TRANSPORTER', 'BOTH') THEN
+    RAISE EXCEPTION 'Tipo de empresa inválido. Debe ser uno de: SELLER, TRANSPORTER, BOTH (según enum CompanyType)';
+  END IF;
+  
+  -- Usar el tipo en mayúsculas
+  p_type := v_type_upper;
+
+  -- Crear o actualizar miembro (member)
+  INSERT INTO public.members(auth0_sub, email, active, pending_approval)
+  VALUES (p_auth0_sub, COALESCE(p_email, ''), true, false)
+  ON CONFLICT (auth0_sub) 
+  DO UPDATE SET 
+    email = COALESCE(EXCLUDED.email, members.email),
+    active = true,
+    pending_approval = false
+  RETURNING id INTO v_member_id;
+
+  -- Obtener plan gratuito
+  SELECT id INTO v_plan_id FROM public.plans WHERE name = 'Gratuito' LIMIT 1;
+  
+  -- Validar que existe el plan
+  IF v_plan_id IS NULL THEN
+    RAISE EXCEPTION 'No se encontró el plan Gratuito. Ejecuta primero el script de datos iniciales.';
+  END IF;
+
+  -- Crear empresa
+  INSERT INTO public.companies(name, type, owner_user_id, plan_id, created_at)
+  VALUES (p_name, p_type, v_member_id, v_plan_id, NOW())
+  RETURNING id INTO v_company_id;
+
+  -- Determinar rol según tipo de empresa
+  -- Según auth.ts línea 86, el dueño de la empresa siempre recibe level 1 (Maestro)
+  -- Independientemente del tipo de empresa, el dueño es Maestro (level 1)
+  v_role_name := 'Maestro';
+  
+  -- Obtener role_id
+  SELECT id INTO v_role_id FROM public.roles 
+  WHERE name = v_role_name
+  LIMIT 1;
+
+  -- Si no existe el rol, usar el de menor nivel disponible
+  IF v_role_id IS NULL THEN
+    SELECT id INTO v_role_id FROM public.roles 
+    ORDER BY level ASC 
+    LIMIT 1;
+  END IF;
+
+  -- Actualizar miembro con company_id y role_id
+  UPDATE public.members
+  SET company_id = v_company_id,
+      role_id = COALESCE(v_role_id, members.role_id),
+      active = true,
+      pending_approval = false
+  WHERE id = v_member_id;
+
+  -- Retornar resultado
+  RETURN json_build_object(
+    'company_id', v_company_id, 
+    'user_id', v_member_id, 
+    'member_id', v_member_id,
+    'role', v_role_name
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ========================================
+-- 3. CREAR FUNCIÓN attach_user_to_company
+-- ========================================
+-- Adaptada al schema actual: usa 'members' en lugar de 'users'
+-- No usa company_memberships, la relación es directa
+CREATE OR REPLACE FUNCTION public.attach_user_to_company(
+  p_company_id uuid,
+  p_email text DEFAULT NULL,
+  p_auth0_sub text DEFAULT NULL
+)
+RETURNS json AS $$
+DECLARE
+  v_member_id uuid;
+  v_role_id uuid;
+BEGIN
+  IF p_auth0_sub IS NULL AND p_email IS NULL THEN
+    RAISE EXCEPTION 'Proporciona auth0_sub o email';
+  END IF;
+
+  -- Crear o actualizar miembro
+  INSERT INTO public.members(auth0_sub, email, active, pending_approval)
+  VALUES (
+    COALESCE(p_auth0_sub, gen_random_uuid()::text), 
+    COALESCE(p_email, ''),
+    true,
+    true  -- Pendiente de aprobación por defecto
+  )
+  ON CONFLICT (auth0_sub) 
+  DO UPDATE SET 
+    email = COALESCE(EXCLUDED.email, members.email)
+  RETURNING id INTO v_member_id;
+
+  -- Obtener role_id para 'User' (level 3)
+  SELECT id INTO v_role_id FROM public.roles 
+  WHERE name = 'User' 
+  LIMIT 1;
+
+  -- Si no existe el rol User, usar el de mayor nivel disponible
+  IF v_role_id IS NULL THEN
+    SELECT id INTO v_role_id FROM public.roles 
+    ORDER BY level DESC 
+    LIMIT 1;
+  END IF;
+  
+  -- Actualizar miembro con company_id y role_id
+  UPDATE public.members
+  SET company_id = p_company_id,
+      role_id = COALESCE(v_role_id, members.role_id),
+      active = true,
+      pending_approval = true  -- Pendiente de aprobación
+  WHERE id = v_member_id;
+
+  RETURN json_build_object(
+    'company_id', p_company_id, 
+    'user_id', v_member_id,
+    'member_id', v_member_id,
+    'role', 'User'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ========================================
+-- 4. VERIFICAR QUE LAS TABLAS EXISTAN
+-- ========================================
+DO $$
+DECLARE
+  roles_existe boolean;
+  plans_existe boolean;
+  members_existe boolean;
+  companies_existe boolean;
+  mensaje_error text;
+BEGIN
+  -- Verificar si las tablas existen
+  SELECT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'roles'
+  ) INTO roles_existe;
+  
+  SELECT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'plans'
+  ) INTO plans_existe;
+  
+  SELECT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'members'
+  ) INTO members_existe;
+  
+  SELECT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'companies'
+  ) INTO companies_existe;
+  
+  -- Si alguna tabla no existe, lanzar error
+  IF NOT roles_existe OR NOT plans_existe OR NOT members_existe OR NOT companies_existe THEN
+    mensaje_error := '❌ ERROR: Las tablas no existen. Primero debes ejecutar las migraciones de Prisma.' || E'\n' ||
+                     'Pasos requeridos:' || E'\n' ||
+                     '1. Ve a la carpeta dawnapi' || E'\n' ||
+                     '2. Ejecuta: npx prisma db push' || E'\n' ||
+                     '3. Luego vuelve a ejecutar este script.' || E'\n' || E'\n' ||
+                     'Tablas faltantes:' || E'\n';
+    
+    IF NOT roles_existe THEN
+      mensaje_error := mensaje_error || '- roles' || E'\n';
+    END IF;
+    
+    IF NOT plans_existe THEN
+      mensaje_error := mensaje_error || '- plans' || E'\n';
+    END IF;
+    
+    IF NOT members_existe THEN
+      mensaje_error := mensaje_error || '- members' || E'\n';
+    END IF;
+    
+    IF NOT companies_existe THEN
+      mensaje_error := mensaje_error || '- companies' || E'\n';
+    END IF;
+    
+    RAISE EXCEPTION '%', mensaje_error;
+  END IF;
+END $$;
+
+-- ========================================
+-- 5. INSERTAR DATOS INICIALES
+-- ========================================
+
+-- 5.1. Insertar roles si no existen
+INSERT INTO public.roles(name, level, description, created_at)
+VALUES
+  ('Maestro', 1, 'Administrador principal', NOW()),
+  ('Admin', 2, 'Admin de transportista', NOW()),
+  ('User', 3, 'Usuario regular', NOW())
+ON CONFLICT (name) DO UPDATE 
+SET 
+  level = EXCLUDED.level, 
+  description = EXCLUDED.description;
+
+-- También asegurar que el nivel sea único
+INSERT INTO public.roles(name, level, description, created_at)
+VALUES
+  ('Maestro', 1, 'Administrador principal', NOW()),
+  ('Admin', 2, 'Admin de transportista', NOW()),
+  ('User', 3, 'Usuario regular', NOW())
+ON CONFLICT (level) DO UPDATE 
+SET 
+  name = EXCLUDED.name, 
+  description = EXCLUDED.description;
+
+-- 5.2. Insertar planes si no existen
+INSERT INTO public.plans(name, price, period, features, max_cargas, created_at)
+VALUES
+  (
+    'Gratuito', 
+    0, 
+    'mes', 
+    ARRAY['Hasta 10 cargas por mes', 'Funciones básicas', 'Soporte por email', 'Anuncios incluidos'],
+    10,
+    NOW()
+  ),
+  (
+    'Premium', 
+    29, 
+    'mes', 
+    ARRAY['Cargas ilimitadas', 'Funciones avanzadas', 'Soporte prioritario', 'Sin anuncios', 'Reportes detallados'],
+    -1,
+    NOW()
+  ),
+  (
+    'Enterprise', 
+    99, 
+    'mes', 
+    ARRAY['Todo lo de Premium', 'API personalizada', 'Soporte 24/7', 'Integraciones avanzadas', 'Gestión multi-empresa'],
+    -1,
+    NOW()
+  )
+ON CONFLICT (name) DO UPDATE 
+SET 
+  price = EXCLUDED.price, 
+  period = EXCLUDED.period, 
+  features = EXCLUDED.features, 
+  max_cargas = EXCLUDED.max_cargas;
+
+-- ========================================
+-- 6. VERIFICACIONES
+-- ========================================
+SELECT '✅ Script ejecutado correctamente' as status;
+
+-- Verificar roles
+SELECT 'Roles:' as info, COUNT(*) as total FROM public.roles;
+SELECT name, level, description FROM public.roles ORDER BY level;
+
+-- Verificar planes  
+SELECT 'Planes:' as info, COUNT(*) as total FROM public.plans;
+SELECT name, price, max_cargas, period FROM public.plans ORDER BY price;
+
+-- Verificar funciones
+SELECT 'Función create_company_with_owner:' as info,
+  EXISTS(
+    SELECT FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public' 
+      AND p.proname = 'create_company_with_owner'
+  ) as existe;
+
+SELECT 'Función attach_user_to_company:' as info,
+  EXISTS(
+    SELECT FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public' 
+      AND p.proname = 'attach_user_to_company'
+  ) as existe;
+
+-- Verificar que la tabla members existe y tiene la columna phone
+SELECT 'Tabla members existe:' as info,
+  EXISTS(
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'members'
+  ) as existe;
+
+SELECT 'Columna phone en members existe:' as info,
+  EXISTS(
+    SELECT FROM information_schema.columns 
+    WHERE table_schema = 'public'
+      AND table_name = 'members' 
+      AND column_name = 'phone'
+  ) as existe;
+
+-- Mostrar parámetros de las funciones
+SELECT 'Parámetros de create_company_with_owner:' as info;
+SELECT 
+  p.proname as function_name,
+  pg_get_function_arguments(p.oid) as parameters
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' 
+  AND p.proname = 'create_company_with_owner';
+
+SELECT 'Parámetros de attach_user_to_company:' as info;
+SELECT 
+  p.proname as function_name,
+  pg_get_function_arguments(p.oid) as parameters
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' 
+  AND p.proname = 'attach_user_to_company';
+
+-- ========================================
+-- 7. CREAR TRIGGER PARA SINCRONIZAR USUARIOS DE AUTH CON MEMBERS
+-- ========================================
+-- Este trigger crea automáticamente un registro en public.members
+-- cuando se crea un nuevo usuario en auth.users (Supabase Auth)
+
+-- 7.1. Eliminar trigger y función si existen
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- 7.2. Crear función que se ejecutará cuando se cree un usuario en auth.users
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Insertar en public.members cuando se crea un usuario en auth.users
+  INSERT INTO public.members (
+    id,
+    auth0_sub,
+    email,
+    active,
+    pending_approval,
+    created_at
+  )
+  VALUES (
+    NEW.id,                    -- El id del usuario de auth.users
+    NEW.id,                    -- auth0_sub es el mismo id (en Supabase, el id es único)
+    COALESCE(NEW.email, ''),   -- Email del usuario
+    true,                      -- Activo por defecto
+    true,                      -- Pendiente de aprobación por defecto
+    NOW()                      -- Fecha de creación
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET
+    email = COALESCE(EXCLUDED.email, members.email),
+    auth0_sub = COALESCE(EXCLUDED.auth0_sub, members.auth0_sub);
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 7.3. Crear el trigger que ejecuta la función cuando se inserta un usuario
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+-- 7.4. Verificar que el trigger se creó correctamente
+SELECT 'Trigger on_auth_user_created:' as info,
+  EXISTS(
+    SELECT FROM pg_trigger
+    WHERE tgname = 'on_auth_user_created'
+      AND tgrelid = 'auth.users'::regclass
+  ) as existe;
+
+SELECT 'Función handle_new_user:' as info,
+  EXISTS(
+    SELECT FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public' 
+      AND p.proname = 'handle_new_user'
+  ) as existe;
+
+-- ========================================
+-- 8. CREAR TRIGGER PARA GENERAR CÓDIGO DE INVITACIÓN AUTOMÁTICO
+-- ========================================
+-- Este trigger genera automáticamente un código de invitación único
+-- cuando se crea una empresa sin código de invitación
+
+-- 8.1. Eliminar trigger y función si existen
+DROP TRIGGER IF EXISTS generate_invitation_code ON public.companies;
+DROP FUNCTION IF EXISTS public.generate_company_invitation_code();
+
+-- 8.2. Crear función para generar código de invitación único
+CREATE OR REPLACE FUNCTION public.generate_company_invitation_code()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_code text;
+  v_exists boolean;
+  v_attempts int := 0;
+  v_max_attempts int := 10;
+BEGIN
+  -- Si ya tiene un código de invitación, no hacer nada
+  IF NEW.invitation_code IS NOT NULL AND NEW.invitation_code != '' THEN
+    RETURN NEW;
+  END IF;
+
+  -- Generar código único (6 caracteres alfanuméricos en mayúsculas)
+  LOOP
+    -- Generar código aleatorio: 6 caracteres alfanuméricos
+    v_code := upper(
+      substr(
+        md5(random()::text || clock_timestamp()::text || NEW.id::text),
+        1,
+        6
+      )
+    );
+    
+    -- Verificar que el código no exista
+    SELECT EXISTS(
+      SELECT 1 FROM public.companies 
+      WHERE invitation_code = v_code
+    ) INTO v_exists;
+    
+    -- Si no existe, usar este código
+    EXIT WHEN NOT v_exists;
+    
+    -- Incrementar contador de intentos
+    v_attempts := v_attempts + 1;
+    
+    -- Si se exceden los intentos, usar un código con timestamp
+    IF v_attempts >= v_max_attempts THEN
+      v_code := upper(
+        substr(
+          md5(NEW.id::text || extract(epoch from now())::text),
+          1,
+          6
+        )
+      );
+      EXIT;
+    END IF;
+  END LOOP;
+
+  -- Asignar el código generado
+  NEW.invitation_code := v_code;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 8.3. Crear el trigger que ejecuta la función antes de insertar
+CREATE TRIGGER generate_invitation_code
+  BEFORE INSERT ON public.companies
+  FOR EACH ROW
+  EXECUTE FUNCTION public.generate_company_invitation_code();
+
+-- 8.4. Verificar que el trigger se creó correctamente
+SELECT 'Trigger generate_invitation_code:' as info,
+  EXISTS(
+    SELECT FROM pg_trigger
+    WHERE tgname = 'generate_invitation_code'
+      AND tgrelid = 'public.companies'::regclass
+  ) as existe;
+
+SELECT 'Función generate_company_invitation_code:' as info,
+  EXISTS(
+    SELECT FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public' 
+      AND p.proname = 'generate_company_invitation_code'
+  ) as existe;
+
+-- ========================================
+-- NOTAS IMPORTANTES
+-- ========================================
+-- ⚠️ ANTES DE EJECUTAR ESTE SCRIPT:
+-- 1. Debes haber ejecutado las migraciones de Prisma primero:
+--    - Ve a la carpeta dawnapi
+--    - Ejecuta: npx prisma migrate dev (desarrollo)
+--      O: npx prisma migrate deploy (producción)
+--    - Esto creará todas las tablas según schema.prisma
+-- 2. Si el script te dice que faltan tablas, ejecuta el paso 1 primero
+-- 3. Luego ejecuta este script completo en Supabase SQL Editor
+--
+-- 📋 INFORMACIÓN:
+-- - Los tipos de empresa válidos son: 'SELLER', 'TRANSPORTER', 'BOTH'
+-- - Los roles disponibles son: 'Maestro' (level 1), 'Admin' (level 2), 'User' (level 3)
+-- - Este script crea las funciones RPC y datos iniciales (roles y planes)
+-- - El trigger on_auth_user_created sincroniza automáticamente los usuarios de Auth con la tabla members
+-- - El trigger generate_invitation_code genera automáticamente un código de invitación único (6 caracteres)
+--   cuando se crea una empresa sin código de invitación
+-- ========================================
