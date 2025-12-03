@@ -7,6 +7,8 @@ import Typography from "./views/Typography";
 import Icons from "./views/Icons";
 import Maps from "./views/Maps";
 import Notifications from "./views/Notifications";
+import Units from "./views/Units";
+import Trailers from "./views/Trailers";
 
 
 export interface DashboardRoute {
@@ -28,11 +30,32 @@ const adminRoutes: DashboardRoute[] = [
     component: Dashboard,
     layout: "/admin"
   },
+   {
+    path: "/perfil",
+    name: "Perfil",
+    icon: "nc-icon nc-chart-pie-35",
+    component: UserProfile,
+    layout: "/admin"
+  },
   {
     path: "/usuarios",
     name: "Usuarios",
     icon: "nc-icon nc-circle-09",
     component: Users,
+    layout: "/admin"
+  },
+   {
+    path: "/unidades",
+    name: "Unidades/Vehiculos",
+    icon: "nc-icon nc-circle-09",
+    component: Units,
+    layout: "/admin"
+  },
+   {
+    path: "/trailers",
+    name: "Trailers/Cajas",
+    icon: "nc-icon nc-circle-09",
+    component: Trailers,
     layout: "/admin"
   },
   {
@@ -69,14 +92,7 @@ const adminRoutes: DashboardRoute[] = [
     icon: "nc-icon nc-bell-55",
     component: Notifications,
     layout: "/admin"
-  },
-   {
-    path: "/perfil",
-    name: "Perfil",
-    icon: "nc-icon nc-chart-pie-35",
-    component: UserProfile,
-    layout: "/admin"
-  },
+  }
 ];
 
 export default adminRoutes;

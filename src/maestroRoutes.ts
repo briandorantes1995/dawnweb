@@ -7,6 +7,8 @@ import Typography from "./views/Typography";
 import Icons from "./views/Icons";
 import Maps from "./views/Maps";
 import Notifications from "./views/Notifications";
+import Units from "./views/Units";
+import Trailers from "./views/Trailers";
 
 export interface DashboardRoute {
   upgrade?: boolean;
@@ -26,6 +28,13 @@ const maestroRoutes: DashboardRoute[] = [
         component: Dashboard,
         layout: "/maestro"
     },
+      {
+        path: "/perfil",
+        name: "Perfil",
+        icon: "nc-icon nc-chart-pie-35",
+        component: UserProfile,
+        layout: "/maestro"
+    },
     {
         path: "/usuarios",
         name: "Usuarios",
@@ -33,6 +42,20 @@ const maestroRoutes: DashboardRoute[] = [
         component: Users,
         layout: "/maestro"
     },
+        {
+            path: "/unidades",
+            name: "Unidades/Vehiculos",
+            icon: "nc-icon nc-circle-09",
+            component: Units,
+            layout: "/maestro"
+        },
+        {
+            path: "/trailers",
+            name: "Trailers/Cajas",
+            icon: "nc-icon nc-circle-09",
+            component: Trailers,
+            layout: "/maestro"
+        },
     {
         path: "/table",
         name: "Table List",
@@ -66,13 +89,6 @@ const maestroRoutes: DashboardRoute[] = [
         name: "Notifications",
         icon: "nc-icon nc-bell-55",
         component: Notifications,
-        layout: "/maestro"
-    },
-    {
-        path: "/perfil",
-        name: "Perfil",
-        icon: "nc-icon nc-chart-pie-35",
-        component: UserProfile,
         layout: "/maestro"
     },
 ];

@@ -7,7 +7,8 @@ import { RootState } from "../store/store";
 import io, { Socket } from "socket.io-client";
 import "leaflet/dist/leaflet.css";
 import { useAssignmentService, Assignment } from "../api/assignments";
-import { useDriverService, Driver } from "../api/drivers";
+import { useDriversService} from "../api/drivers";
+import { Driver } from "../types/Driver";
 import toast from "react-hot-toast";
 
 const defaultIcon = new Icon({
@@ -43,7 +44,7 @@ type TrackingType = "driver" | "assignment";
 const Maps: React.FC = () => {
   const defaultPosition: LatLngExpression = [40.748817, -73.985428];
   const { fetchAssignments } = useAssignmentService();
-  const { fetchDrivers } = useDriverService();
+  const { fetchDrivers } = useDriversService();
   
   // Función para extraer última ubicación del assignment (similar a la app móvil)
   const extractLastLocation = (assignment: Assignment | undefined): { lat: number; lng: number } | null => {

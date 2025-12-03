@@ -1,40 +1,48 @@
 // src/api/drivers.ts
 import { useApi } from "../hooks/useApi";
+import {Driver,FetchDriversResponse,CreateDriverPayload,CreateDriverResponse,UpdateDriverPayload,
+UpdateDriverResponse} from "../types/Driver";
 
-export interface Driver {
-  id: string;
-  member_id: string;
-  company_id: string;
-  license_number?: string;
-  license_type?: string;
-  active: boolean;
-  tracking_active?: boolean;
-  member: {
-    id: string;
-    first_name?: string;
-    last_name?: string;
-    email: string;
+export function useDriversService() {
+  const { get, post, put, patch } = useApi();
+
+  // GET — Fetch all drivers (active/inactive)
+  const fetchDrivers = async (): Promise<FetchDriversResponse> => {
+    return await get<FetchDriversResponse>("/drivers/");
   };
-}
 
-export interface DriversResponse {
-  active: Driver[];
-  inactive: Driver[];
-}
+  // POST — Create driver
+  const createDriver = async (
+    userId: string,
+    payload: CreateDriverPayload
+  ): Promise<CreateDriverResponse> => {
+    return await post<CreateDriverResponse>(`/drivers/create/${userId}`, payload);
+  };
 
-export function useDriverService() {
-  const { get } = useApi();
+  // PUT — Update driver details
+  const editDriver = async (
+    driverId: string,
+    payload: UpdateDriverPayload
+  ): Promise<UpdateDriverResponse> => {
+    return await put<UpdateDriverResponse>(`/drivers/update/${driverId}`, payload);
+  };
 
-  // -------------------------------------------------------------
-  // Obtener drivers de la compañía
-  // GET /drivers
-  // -------------------------------------------------------------
-  const fetchDrivers = async (): Promise<DriversResponse> => {
-    return await get<DriversResponse>("/drivers");
+  // PATCH — Activate driver
+  const activateDriver = async (driverId: string) => {
+    return await patch<UpdateDriverResponse>(`/drivers/status/${driverId}`, { active: true });
+  };
+
+  // PATCH — Deactivate driver
+  const deactivateDriver = async (driverId: string) => {
+    return await patch<UpdateDriverResponse>(`/drivers/status/${driverId}`, { active: false });
   };
 
   return {
     fetchDrivers,
+    createDriver,
+    editDriver,
+    activateDriver,
+    deactivateDriver,
   };
 }
 

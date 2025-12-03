@@ -234,7 +234,7 @@ const Login: React.FC = () => {
                                                 fontWeight: 600,
                                                 textShadow: "1px 1px 3px rgba(0,0,0,0.8)"
                                             }}
-                                            onClick={() => dispatch(oauthLoginThunk({ provider: "microsoft" }))}
+                                            onClick={() => dispatch(oauthLoginThunk({ provider: "azure" }))}
                                         >
                                             <i className="fab fa-microsoft mr-2"></i> Continuar con Microsoft
                                         </button>

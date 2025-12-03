@@ -45,8 +45,7 @@ export const loginThunk = createAsyncThunk(
 /**
  * Inicia el flujo QR
  */
-export const loginWithQrThunk = createAsyncThunk(
-    "auth/loginWithQr",
+export const loginWithQrThunk = createAsyncThunk("auth/loginWithQr",
     async (
         { tokens, user }: { tokens: { accessToken: string; refreshToken: string }; user: any },
         { rejectWithValue, dispatch }
@@ -81,7 +80,7 @@ export const loginWithQrThunk = createAsyncThunk(
  */
 export const oauthLoginThunk = createAsyncThunk(
   "auth/oauthLogin",
-  async ({ provider }: { provider: "google" | "microsoft" }, { rejectWithValue }) => {
+  async ({ provider }: { provider: "google" | "azure" }, { rejectWithValue }) => {
     try {
       const redirectTo = `${window.location.origin}/oauth/callback`;
       const res = await apiFetch<{ url: string }>("/auth/oauth-login", {
