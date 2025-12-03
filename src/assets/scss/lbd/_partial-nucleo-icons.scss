@@ -6,8 +6,12 @@ License - nucleoapp.com/license/
 -------------------------------- */
 @font-face {
   font-family: 'nucleo-icons';
-  src: url('~assets/fonts/nucleo-icons.eot');
-  src: url('~assets/fonts/nucleo-icons.eot') format('embedded-opentype'), url('~assets/fonts/nucleo-icons.woff2') format('woff2'), url('~assets/fonts/nucleo-icons.woff') format('woff'), url('~assets/fonts/nucleo-icons.ttf') format('truetype'), url('~assets/fonts/nucleo-icons.svg') format('svg');
+  src: url('/fonts/nucleo-icons.eot');
+  src: url('/fonts/nucleo-icons.eot') format('embedded-opentype'), 
+       url('/fonts/nucleo-icons.woff2') format('woff2'), 
+       url('/fonts/nucleo-icons.woff') format('woff'), 
+       url('/fonts/nucleo-icons.ttf') format('truetype'), 
+       url('/fonts/nucleo-icons.svg') format('svg');
   font-weight: normal;
   font-style: normal;
 }
@@ -76,12 +80,47 @@ License - nucleoapp.com/license/
   left: -1.9047619em;
 }
 
-.all-icons{
-    .font-icon-list{
-        .font-icon-detail i{
-            font-size: 32px;
-        }
+/*------------------------
+  icon list styles
+-------------------------*/
+.all-icons {
+  .font-icon-list {
+    padding: 0;
+    margin: 0;
+    
+    .font-icon-detail {
+      text-align: center;
+      padding: 45px 0px 30px;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      margin: 15px 0;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        background-color: #f9f9f9;
+        border-color: #ddd;
+      }
+      
+      i {
+        font-size: 32px;
+        color: #555;
+        display: block;
+        margin-bottom: 10px;
+      }
+      
+      p {
+        margin: 10px 0 0 0;
+        font-size: 13px;
+        color: #aaa;
+        font-weight: 400;
+        text-transform: none;
+      }
     }
+  }
+  
+  input {
+    border: 0;
+  }
 }
 /*------------------------
   spinning icons

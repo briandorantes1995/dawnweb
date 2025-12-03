@@ -64,6 +64,25 @@ const Maps: React.FC = () => {
     
     return null;
   };
+
+  // Función para extraer última ubicación del driver
+  const extractDriverLastLocation = (driver: Driver | undefined): { lat: number; lng: number } | null => {
+    if (!driver) return null;
+    
+    const lastLocation = driver.last_location;
+    if (!lastLocation || typeof lastLocation !== 'object') return null;
+    
+    if ('lat' in lastLocation && 'lng' in lastLocation) {
+      const lat = typeof lastLocation.lat === 'number' ? lastLocation.lat : parseFloat(String(lastLocation.lat));
+      const lng = typeof lastLocation.lng === 'number' ? lastLocation.lng : parseFloat(String(lastLocation.lng));
+      
+      if (!isNaN(lat) && !isNaN(lng)) {
+        return { lat, lng };
+      }
+    }
+    
+    return null;
+  };
   const { accessToken, user } = useSelector((state: RootState) => state.auth);
   const [trackingType, setTrackingType] = useState<TrackingType>("driver");
   const [loading, setLoading] = useState(false);
@@ -85,6 +104,15 @@ const Maps: React.FC = () => {
   useEffect(() => {
     trackingTypeRef.current = trackingType;
   }, [trackingType]);
+
+  // Debug: Log cuando cambia la ubicación
+  useEffect(() => {
+    if (location) {
+      console.log("📍 Estado de ubicación actualizado:", location);
+    } else {
+      console.log("📍 Estado de ubicación limpiado (null)");
+    }
+  }, [location]);
 
   // Cargar drivers o asignaciones según el tipo seleccionado
   useEffect(() => {
@@ -125,9 +153,33 @@ const Maps: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackingType]);
 
-  // Cargar última ubicación cuando se selecciona una asignación (similar a la app móvil)
+  // Cargar última ubicación cuando se selecciona un driver o asignación
   useEffect(() => {
-    if (trackingType === "assignment" && selectedId) {
+    if (!selectedId) {
+      // Limpiar ubicación cuando no hay selección
+      setLocation(null);
+      setMapCenter([40.748817, -73.985428]);
+      return;
+    }
+
+    if (trackingType === "driver" && selectedId) {
+      // Buscar el driver seleccionado en la lista
+      const selectedDriver = drivers.find(d => d.id === selectedId);
+      console.log("Driver seleccionado:", selectedDriver);
+      const lastLocation = extractDriverLastLocation(selectedDriver);
+      
+      if (lastLocation) {
+        console.log("✓ Última ubicación extraída del driver:", lastLocation);
+        setLocation(lastLocation);
+        setMapCenter([lastLocation.lat, lastLocation.lng]);
+        console.log("✓ Estado de ubicación actualizado y mapa centrado");
+      } else {
+        console.log("⚠ No se encontró última ubicación en el driver - esperando actualización del socket");
+        console.log("Driver completo:", selectedDriver);
+        // Si no hay última ubicación, mantener la ubicación actual hasta que llegue del socket
+        // No limpiar para evitar que desaparezca el marcador si ya había uno
+      }
+    } else if (trackingType === "assignment" && selectedId) {
       // Buscar el assignment seleccionado en la lista
       const selectedAssignment = assignments.find(a => a.id === selectedId);
       console.log("Assignment seleccionado:", selectedAssignment);
@@ -138,150 +190,185 @@ const Maps: React.FC = () => {
         setLocation(lastLocation);
         setMapCenter([lastLocation.lat, lastLocation.lng]);
       } else {
-        console.log("No se encontró última ubicación en el assignment");
+        console.log("No se encontró última ubicación en el assignment - esperando actualización del socket");
         // Si no hay última ubicación, mantener la ubicación actual hasta que llegue del socket
         // No limpiar para evitar que desaparezca el marcador
       }
-    } else {
-      // Limpiar ubicación cuando no hay selección o es un driver
-      setLocation(null);
-      setMapCenter([40.748817, -73.985428]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, trackingType, assignments]);
+  }, [selectedId, trackingType, assignments, drivers]);
 
-  // Conectar socket SOLO cuando hay una selección válida
+  // Asegurar que estamos en la sala correcta cuando cambia el trackingType
   useEffect(() => {
-    // Si no hay selección, desconectar y salir
-    if (!selectedId || selectedId === "") {
-      if (socketRef.current) {
-        const prevId = currentIdRef.current;
-        if (prevId) {
-          if (trackingType === "assignment") {
-            socketRef.current.emit("leave-assignment", { assignmentId: prevId });
-          } else if (user?.company_id) {
-            socketRef.current.emit("leave", { panel: "drivers", companyId: user.company_id });
-          }
-        }
-        socketRef.current.disconnect();
-        socketRef.current = null;
-        currentIdRef.current = "";
-      }
+    if (!socketRef.current?.connected || !user?.company_id) {
       return;
     }
 
-    // Validar que tenemos los datos necesarios
+    if (trackingType === "driver") {
+      socketRef.current.emit("join", { panel: "drivers", companyId: user.company_id });
+      console.log(`✓ Cambiado a modo driver - Unido a la sala drivers:${user.company_id}`);
+    }
+  }, [trackingType, user?.company_id]);
+
+  // Conectar socket una vez cuando hay company_id (similar a React Native - se mantiene conectado)
+  useEffect(() => {
     if (!accessToken || !user?.company_id) {
       return;
     }
 
-    // Desconectar socket anterior si existe y es diferente
-    if (socketRef.current && currentIdRef.current !== selectedId) {
-      const prevId = currentIdRef.current;
-      if (prevId) {
-        if (trackingType === "assignment") {
-          socketRef.current.emit("leave-assignment", { assignmentId: prevId });
-        } else {
-          socketRef.current.emit("leave", { panel: "drivers", companyId: user.company_id });
-        }
-      }
-      socketRef.current.disconnect();
-      socketRef.current = null;
-    }
-
-    // Si ya hay un socket conectado para esta selección, no crear uno nuevo
-    if (socketRef.current && currentIdRef.current === selectedId) {
+    // Si ya hay un socket conectado, no crear uno nuevo
+    if (socketRef.current?.connected) {
+      console.log("Socket ya está conectado, reutilizando conexión");
       return;
     }
 
     // Conectar socket
     const socket = io(import.meta.env.VITE_API_URL, {
       transports: ["websocket"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
       auth: {
         token: accessToken,
       },
     });
 
-    // Guardar socket y ID actual en los refs inmediatamente
     socketRef.current = socket;
-    currentIdRef.current = selectedId;
 
     socket.on("connect", () => {
-      console.log(`Socket conectado para ${trackingTypeRef.current}:`, selectedIdRef.current);
+      console.log("✓ Socket conectado exitosamente");
       
-      if (trackingTypeRef.current === "assignment") {
-        // Unirse a la sala del assignment
-        socket.emit("join-assignment", { assignmentId: selectedIdRef.current });
-        console.log(`Unido a la sala assignment:${selectedIdRef.current}`);
-      } else {
-        // Unirse a la sala de drivers de la compañía
+      // Unirse a la sala de drivers cuando estamos en modo driver
+      if (trackingTypeRef.current === "driver") {
         socket.emit("join", { panel: "drivers", companyId: user.company_id });
-        console.log(`Unido a la sala drivers:${user.company_id}`);
+        console.log(`✓ Unido a la sala drivers:${user.company_id}`);
       }
     });
 
-    // Escuchar actualizaciones según el tipo
-    if (trackingType === "assignment") {
-      const assignmentHandler = (payload: { assignmentId: string; lat: number; lng: number; ts: number }) => {
-        console.log("Actualización de assignment recibida:", payload);
-        // Usar el ref para obtener el valor actual
-        const currentSelectedId = selectedIdRef.current;
-        if (payload.assignmentId === currentSelectedId) {
-          if (typeof payload.lat === "number" && typeof payload.lng === "number" && 
-              !isNaN(payload.lat) && !isNaN(payload.lng)) {
-            setLocation({ lat: payload.lat, lng: payload.lng });
-            setMapCenter([payload.lat, payload.lng]);
-          }
-        }
-      };
-      socket.on("assignment:update", assignmentHandler);
-      
-      // Cleanup para assignment
-      return () => {
-        if (socketRef.current) {
-          socketRef.current.off("assignment:update", assignmentHandler);
-          if (currentIdRef.current) {
-            socketRef.current.emit("leave-assignment", { assignmentId: currentIdRef.current });
-          }
-          socketRef.current.disconnect();
-          socketRef.current = null;
-          currentIdRef.current = "";
-        }
-      };
-    } else {
-      const driverHandler = (payload: { driverId: string; lat: number; lng: number; updatedAt: number }) => {
-        console.log("Actualización de driver recibida:", payload);
-        // Usar el ref para obtener el valor actual
-        const currentSelectedId = selectedIdRef.current;
-        if (payload.driverId === currentSelectedId) {
-          if (typeof payload.lat === "number" && typeof payload.lng === "number" && 
-              !isNaN(payload.lat) && !isNaN(payload.lng)) {
-            setLocation({ lat: payload.lat, lng: payload.lng });
-            setMapCenter([payload.lat, payload.lng]);
-          }
-        }
-      };
-      socket.on("driver:update", driverHandler);
-      
-      // Cleanup para driver
-      return () => {
-        if (socketRef.current) {
-          socketRef.current.off("driver:update", driverHandler);
-          if (user?.company_id && currentIdRef.current) {
-            socketRef.current.emit("leave", { panel: "drivers", companyId: user.company_id });
-          }
-          socketRef.current.disconnect();
-          socketRef.current = null;
-          currentIdRef.current = "";
-        }
-      };
+    // Si el socket ya está conectado, unirse inmediatamente
+    if (socket.connected && trackingType === "driver") {
+      socket.emit("join", { panel: "drivers", companyId: user.company_id });
+      console.log(`✓ Unido a la sala drivers:${user.company_id} (socket ya estaba conectado)`);
     }
 
     socket.on("connect_error", (error) => {
       console.error("Error conectando socket:", error);
       toast.error("Error conectando con el servidor en tiempo real");
     });
-  }, [accessToken, selectedId, trackingType, user?.company_id]);
+
+    // Cleanup: desconectar solo cuando el componente se desmonte
+    return () => {
+      if (socketRef.current) {
+        if (user?.company_id) {
+          socketRef.current.emit("leave", { panel: "drivers", companyId: user.company_id });
+        }
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [accessToken, user?.company_id, trackingType]);
+
+  // Escuchar eventos de drivers (similar a React Native - escucha TODOS los eventos)
+  useEffect(() => {
+    if (!socketRef.current) {
+      console.log("⚠ Socket no disponible para escuchar eventos de driver");
+      return;
+    }
+
+    if (!socketRef.current.connected) {
+      console.log("⚠ Socket no conectado, esperando conexión...");
+      return;
+    }
+
+    if (trackingType !== "driver") {
+      console.log("⚠ No estamos en modo driver, no se escucharán eventos de driver");
+      return;
+    }
+
+    console.log("✓ Configurando listener para eventos driver:update");
+
+    // Asegurarse de estar en la sala de drivers
+    if (user?.company_id) {
+      socketRef.current.emit("join", { panel: "drivers", companyId: user.company_id });
+      console.log(`✓ Asegurado unirse a la sala drivers:${user.company_id}`);
+    }
+
+    // Handler para actualizaciones de drivers - escucha TODOS los eventos (como React Native)
+    const handleDriverUpdate = (payload: { driverId: string; lat: number; lng: number; updatedAt: number }) => {
+      console.log("=== Actualización de driver recibida ===");
+      console.log("Payload completo:", payload);
+      
+      // Convertir ambos IDs a string para comparación segura
+      const payloadDriverId = String(payload.driverId);
+      const currentSelectedId = String(selectedIdRef.current);
+      
+      console.log("Driver ID en payload:", payloadDriverId);
+      console.log("Driver ID seleccionado:", currentSelectedId);
+      
+      // Solo actualizar si es el driver seleccionado
+      if (payloadDriverId === currentSelectedId && currentSelectedId !== "") {
+        console.log("✓ Coincidencia! Actualizando ubicación...");
+        if (typeof payload.lat === "number" && typeof payload.lng === "number" && 
+            !isNaN(payload.lat) && !isNaN(payload.lng)) {
+          const newLocation = { lat: payload.lat, lng: payload.lng };
+          console.log("✓ Estableciendo nueva ubicación:", newLocation);
+          setLocation(newLocation);
+          setMapCenter([payload.lat, payload.lng]);
+          console.log("✓ Estado de ubicación y centro del mapa actualizados");
+        } else {
+          console.error("✗ Coordenadas inválidas:", payload.lat, payload.lng);
+        }
+      } else {
+        console.log("✗ No coincide el driver ID o no hay selección, ignorando");
+        console.log("  - Payload driverId:", payloadDriverId);
+        console.log("  - Selected driverId:", currentSelectedId);
+        console.log("  - Hay selección:", currentSelectedId !== "");
+      }
+    };
+
+    socketRef.current.on("driver:update", handleDriverUpdate);
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off("driver:update", handleDriverUpdate);
+      }
+    };
+  }, [trackingType, selectedId, user?.company_id]);
+
+  // Manejar asignaciones por separado
+  useEffect(() => {
+    if (!selectedId || trackingType !== "assignment" || !socketRef.current) {
+      return;
+    }
+
+    if (!socketRef.current.connected) {
+      return;
+    }
+
+    // Unirse a la sala del assignment
+    socketRef.current.emit("join-assignment", { assignmentId: selectedId });
+    console.log(`Unido a la sala assignment:${selectedId}`);
+
+    const assignmentHandler = (payload: { assignmentId: string; lat: number; lng: number; ts: number }) => {
+      console.log("Actualización de assignment recibida:", payload);
+      if (payload.assignmentId === selectedIdRef.current) {
+        if (typeof payload.lat === "number" && typeof payload.lng === "number" && 
+            !isNaN(payload.lat) && !isNaN(payload.lng)) {
+          setLocation({ lat: payload.lat, lng: payload.lng });
+          setMapCenter([payload.lat, payload.lng]);
+        }
+      }
+    };
+
+    socketRef.current.on("assignment:update", assignmentHandler);
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.emit("leave-assignment", { assignmentId: selectedId });
+        socketRef.current.off("assignment:update", assignmentHandler);
+      }
+    };
+  }, [selectedId, trackingType]);
 
   return (
     <Container fluid>
