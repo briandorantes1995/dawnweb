@@ -3,7 +3,10 @@
     {
       "src": "package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
+      "config": { 
+        "installCommand": "npm install --legacy-peer-deps",
+        "distDir": "dist" 
+      }
     }
   ],
   "rewrites": [
