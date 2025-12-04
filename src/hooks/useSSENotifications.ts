@@ -74,12 +74,6 @@ export function useSSENotifications() {
                                 }
 
 
-                                //GUARDAR EN REDUX (máx 5)
-                                store.dispatch(addNotification({
-                                    message: data.message,
-                                    type: "info"
-                                }));
-
                                 console.log("📨 SSE recibido:", data);
 
                             } catch (err) {
