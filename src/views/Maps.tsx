@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster";
+import MarkerClusterGroup from "@changey/react-leaflet-markercluster";
 import { Icon } from "leaflet";
 import {Card, Form, Spinner, Container, Button, ButtonGroup} from "react-bootstrap";
 import { useSelector } from "react-redux";
