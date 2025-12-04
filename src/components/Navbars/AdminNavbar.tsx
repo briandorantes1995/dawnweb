@@ -99,7 +99,7 @@ function Header() {
               <Nav.Item>
                 <Nav.Link className="m-0">
                   <i className="nc-icon nc-single-02"></i>
-                  <span className="no-icon">{user?.first_name ?? "Usuario"}</span>
+                  <span className="no-icon">{[user?.first_name, user?.last_name].filter(Boolean).join(" ") || "Usuario"}</span>
                 </Nav.Link>
               </Nav.Item>
               {/* 🔔 NOTIFICACIONES */}

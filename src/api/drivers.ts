@@ -12,18 +12,12 @@ export function useDriversService() {
   };
 
   // POST — Create driver
-  const createDriver = async (
-    userId: string,
-    payload: CreateDriverPayload
-  ): Promise<CreateDriverResponse> => {
+  const createDriver = async (userId: string,payload: CreateDriverPayload): Promise<CreateDriverResponse> => {
     return await post<CreateDriverResponse>(`/drivers/create/${userId}`, payload);
   };
 
   // PUT — Update driver details
-  const editDriver = async (
-    driverId: string,
-    payload: UpdateDriverPayload
-  ): Promise<UpdateDriverResponse> => {
+  const editDriver = async (driverId: string,payload: UpdateDriverPayload): Promise<UpdateDriverResponse> => {
     return await put<UpdateDriverResponse>(`/drivers/update/${driverId}`, payload);
   };
 

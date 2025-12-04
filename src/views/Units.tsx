@@ -6,12 +6,18 @@ import EditVehicleModal from "../components/Vehicles/EditVehicleModal";
 import AssignDriverModal from "../components/Vehicles/AssignDriverModal";
 import toast from "react-hot-toast";
 
-const UnitsTabs: React.FC = () => {
-  const { fetchUnits, editUnit, changeStatus, assigndriver, unassigndriver } =useUnitsService();
 
+const emptyUnit = {
+  type: "",
+  plates: "",
+  tonnage: "",
+};
+
+
+const UnitsTabs: React.FC = () => {
+  const { fetchUnits, editUnit, changeStatus, assigndriver, unassigndriver,createUnit } =useUnitsService();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [activeList, setActiveList] = useState([]);
   const [inactiveList, setInactiveList] = useState([]);
   const [assignedList, setAssignedList] = useState([]);
@@ -19,6 +25,8 @@ const UnitsTabs: React.FC = () => {
   // Modales
   const [showEdit, setShowEdit] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+
+  const [showCreate, setShowCreate] = useState(false);
 
   const [showAssign, setShowAssign] = useState(false);
   const [assigningId, setAssigningId] = useState<string | null>(null);
@@ -112,6 +120,9 @@ const UnitsTabs: React.FC = () => {
       <Card>
         <Card.Header>
           <Card.Title as="h4">Unidades</Card.Title>
+
+        <button className="btn btn-primary" onClick={() => setShowCreate(true)}>Crear unidad</button>
+
         </Card.Header>
 
         <Card.Body>
@@ -157,6 +168,8 @@ const UnitsTabs: React.FC = () => {
           show={showEdit}
           onHide={() => setShowEdit(false)}
           initial={editingItem}
+          action="Editar"
+          type="unit"
           onSubmit={async (form) => {
             await editUnit(editingItem.id, form);
             toast.success("Unidad actualizada");
@@ -165,6 +178,23 @@ const UnitsTabs: React.FC = () => {
           }}
         />
       )}
+
+
+      {/* Modal Crear */}
+        <EditVehicleModal
+          show={showCreate}
+          onHide={() => setShowCreate(false)}
+          initial={emptyUnit}
+          action="Crear"
+          type="unit"
+          onSubmit={async (form) => {
+            await createUnit(form);
+            toast.success("Unidad creada");
+            setShowCreate(false);
+            loadUnits();
+          }}
+        />
+
 
       {/* Modal Asignar Driver */}
       <AssignDriverModal

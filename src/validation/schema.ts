@@ -6,20 +6,19 @@ export const ProfileSchema = Yup.object().shape({
     phone: Yup.string().required("Telefono es requerido"),
   });
 
-  export const UnitSchema = Yup.object().shape({
-    type: Yup.string().required("Tipo de unidad es requerido"),
-    plates: Yup.string().optional(),
-    unit_identifier: Yup.string().required("Identificador de unidad es requerido"),
-    tonnage: Yup.number().typeError("Tonelaje debe ser numerico").optional(),
-  });
+export const UnitSchema = Yup.object().shape({
+  type: Yup.string().required("Tipo de unidad es requerido"),
+  plates: Yup.string().optional(),
+  unit_identifier: Yup.string().required("Identificador de unidad es requerido"),
+  tonnage: Yup.number().typeError("Tonelaje debe ser numérico").optional(),
+});
 
-
-  export const TrailerSchema = Yup.object().shape({
-    type: Yup.string().required("Tipo de unidad es requerido"),
-    volume: Yup.number().typeError("Volumen debe ser numerico").optional(),
-    tonnage: Yup.number().typeError("Tonelaje debe ser numerico").optional(),
-    plates: Yup.string().optional(),
-    box_numer: Yup.string().optional(),
-    color: Yup.string().optional(),
-  });
+export const TrailerSchema = Yup.object().shape({
+  type: Yup.string().required("Tipo de unidad es requerido"),
+  volume: Yup.number().typeError("Volumen debe ser numérico").optional(),
+  tonnage: Yup.number().typeError("Tonelaje debe ser numérico").optional(),
+  plates: Yup.string().optional(),
+  box_number: Yup.string().optional(),
+  color: Yup.string().optional(),
+});
 

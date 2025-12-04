@@ -7,12 +7,19 @@ import EditVehicleModal from "../components/Vehicles/EditVehicleModal";
 import AssignDriverModal from "../components/Vehicles/AssignDriverModal";
 import toast from "react-hot-toast";
 
-const TrailersTabs: React.FC = () => {
-  const { fetchTrailers,editTrailer,changeStatus,assigndriver,unassigndriver,} = useTrailersService();
+const emptyTrailer = {
+  type: "",
+  plates: "",
+  volume: "",
+  box_number: "",
+  color: "",
+};
 
+const TrailersTabs: React.FC = () => {
+
+  const { fetchTrailers,editTrailer,createTrailer,changeStatus,assigndriver,unassigndriver,} = useTrailersService();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [activeList, setActiveList] = useState([]);
   const [inactiveList, setInactiveList] = useState([]);
   const [assignedList, setAssignedList] = useState([]);
@@ -20,6 +27,8 @@ const TrailersTabs: React.FC = () => {
   // Modales
   const [showEdit, setShowEdit] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [showCreate, setShowCreate] = useState(false);
+
 
   const [showAssign, setShowAssign] = useState(false);
   const [assigningId, setAssigningId] = useState<string | null>(null);
@@ -118,6 +127,7 @@ const TrailersTabs: React.FC = () => {
       <Card>
         <Card.Header>
           <Card.Title as="h4">Trailers</Card.Title>
+           <button className="btn btn-primary" onClick={() => setShowCreate(true)}>Añadir Trailer/Caja</button>
         </Card.Header>
 
         <Card.Body>
@@ -162,6 +172,8 @@ const TrailersTabs: React.FC = () => {
         <EditVehicleModal
           show={showEdit}
           onHide={() => setShowEdit(false)}
+          action="Editar"
+          type="trailer"
           initial={editingItem}
           onSubmit={async (form) => {
             await editTrailer(editingItem.id, form);
@@ -171,6 +183,22 @@ const TrailersTabs: React.FC = () => {
           }}
         />
       )}
+
+      {/* Modal Crear */}
+      <EditVehicleModal
+        show={showCreate}
+        onHide={() => setShowCreate(false)}
+        action="Crear"
+        type="trailer"
+        initial={emptyTrailer}
+        onSubmit={async (form) => {
+          await createTrailer(form); // Debe existir en useTrailersService
+          toast.success("Trailer creado");
+          setShowCreate(false);
+          loadTrailers();
+        }}
+      />
+
 
       {/* Modal Asignar Driver */}
       <AssignDriverModal
