@@ -75,7 +75,7 @@ export interface AssignmentsResponse {
 }
 
 export function useAssignmentService() {
-  const { get } = useApi();
+  const { get, patch } = useApi();
 
   // -------------------------------------------------------------
   // Obtener asignaciones de la compañía
@@ -93,9 +93,37 @@ export function useAssignmentService() {
     return await get<Assignment>(`/assignments/${assignmentId}`);
   };
 
+  // -------------------------------------------------------------
+  // Obtener asignación por loadId
+  // GET /assignments (y filtrar por load_id)
+  // -------------------------------------------------------------
+  const fetchAssignmentByLoadId = async (loadId: string): Promise<Assignment | null> => {
+    const result = await fetchAssignments();
+    const allAssignments = [
+      ...(result.pendiente || []),
+      ...(result.sinAsignar || []),
+      ...(result.problema_reportado || []),
+    ];
+    const assignment = allAssignments.find(
+      (a) => a.load_id === loadId || a.load?.id === loadId
+    );
+    return assignment || null;
+  };
+
+  // -------------------------------------------------------------
+  // Asignar conductor a una asignación
+  // PATCH /assignments/edit/:assignmentId
+  // Body: { driver_id: string }
+  // -------------------------------------------------------------
+  const assignDriver = async (assignmentId: string, driverId: string) => {
+    return await patch(`/assignments/edit/${assignmentId}`, { driver_id: driverId });
+  };
+
   return {
     fetchAssignments,
     fetchAssignmentById,
+    fetchAssignmentByLoadId,
+    assignDriver,
   };
 }
 

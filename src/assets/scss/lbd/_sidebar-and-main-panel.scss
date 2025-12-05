@@ -370,6 +370,19 @@ body > .navbar-collapse{
             -webkit-transform: translate(0, 30%);
             -o-transform: translate(0, 30%);
             transform: translate(0, 30%);
+            
+            // Excluir modales centrados del desplazamiento al 30%
+            &.modal-dialog-centered,
+            &.change-role-modal-dialog,
+            &.assign-driver-modal-dialog,
+            &.assign-chofer-modal-dialog,
+            &.resumen-carga-modal-dialog,
+            &.create-load-modal-dialog{
+                -webkit-transform: none;
+                -o-transform: none;
+                transform: none;
+                margin-top: 15px;
+            }
         }
     }
     &.modal-mini{

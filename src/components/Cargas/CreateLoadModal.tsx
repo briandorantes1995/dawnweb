@@ -1,0 +1,996 @@
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  Modal,
+  Button,
+  Form,
+  Row,
+  Col,
+  Spinner,
+  Card,
+} from "react-bootstrap";
+import { useLoadsService } from "../../api/loads";
+import { useBranchesService, type Branch } from "../../api/branches";
+import { useProvidersService, type Provider } from "../../api/providers";
+import { useUnitsService } from "../../api/unit";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store/store";
+import { validateLoadForm, type FormData } from "../../utils/loadFormValidation";
+import { buildLoadPayload } from "../../utils/loadFormPayload";
+import { normalizeGoogleMapsLink } from "../../utils/googleMapsUtils";
+import toast from "react-hot-toast";
+import "./CreateLoadModal.css";
+
+const VEHICLE_TYPES = [
+  "Moto (Entregas rápidas)",
+  "Moto con caja (Paquetería ligera)",
+  "Auto (E-commerce ligero)",
+  "Pickup 0.5t (Carga mediana)",
+  "Pickup 1t (Carga mayor)",
+  "Van chica (Paquetería)",
+  "Van mediana (1.2–1.8t)",
+  "Camioneta 1.5t (Distribución local)",
+  "Camioneta 2.5t (Logística media)",
+  "Camioneta 3.5t (Logística pesada)",
+  "Camión torton (Carga regional)",
+  "Tráiler (Transporte nacional)",
+] as const;
+
+interface Props {
+  show: boolean;
+  onHide: () => void;
+  onSuccess: () => void;
+}
+
+const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
+  const { createLoad } = useLoadsService();
+  const { fetchBranches } = useBranchesService();
+  const { fetchProviders } = useProvidersService();
+  const { fetchUnits } = useUnitsService();
+  const currentUser = useSelector((s: RootState) => s.auth.user);
+
+  const [formData, setFormData] = useState<FormData>({
+    folio: "",
+    empresaTransportista: "",
+    tipoTransporte: "",
+    unidadPropia: "",
+    tipoCarga: "",
+    tipoVehiculo: "",
+    tipoCargaTransporte: "",
+    origen: "",
+    destino: "",
+    nombreCliente: "",
+    linkUbicacionCliente: "",
+    descripcion: "",
+    peso: "",
+    volumen: "",
+    fechaCarga: "",
+    horaCarga: "",
+    fechaEntrega: "",
+    horaEntrega: "",
+    contactoOrigen: "",
+    contactoDestino: "",
+    observaciones: "",
+  });
+
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [transportistas, setTransportistas] = useState<Provider[]>([]);
+  const [loadingTransportistas, setLoadingTransportistas] = useState(false);
+  const [unidadesPropias, setUnidadesPropias] = useState<any[]>([]);
+  const [loadingUnidades, setLoadingUnidades] = useState(false);
+  const [tieneUnidadesPropias, setTieneUnidadesPropias] = useState(false);
+
+  const [selectedOrigin, setSelectedOrigin] = useState<Branch | null>(null);
+  const [selectedDestination, setSelectedDestination] = useState<Branch | null>(null);
+  const [selectedTransportista, setSelectedTransportista] = useState<Provider | null>(null);
+  const [selectedUnidad, setSelectedUnidad] = useState<any | null>(null);
+
+  const [showOriginModal, setShowOriginModal] = useState(false);
+  const [showDestinationModal, setShowDestinationModal] = useState(false);
+  const [showTransportistaModal, setShowTransportistaModal] = useState(false);
+  const [showUnidadModal, setShowUnidadModal] = useState(false);
+  const [showTipoVehiculoModal, setShowTipoVehiculoModal] = useState(false);
+
+  const [saving, setSaving] = useState(false);
+
+  const loadBranches = useCallback(async () => {
+    if (!currentUser?.company_id) return;
+    setLoadingBranches(true);
+    try {
+      const response = await fetchBranches();
+      const allBranches = [
+        ...(response?.activeBranches || []),
+        ...(response?.inactiveBranches || []),
+      ];
+      setBranches(allBranches);
+      if (allBranches.length === 0) {
+        console.warn("No hay sucursales disponibles para esta empresa");
+      }
+    } catch (err: any) {
+      // Si el error es 404 o "No branches found", es normal si no hay sucursales
+      const errorMessage = err?.message || err?.response?.data?.message || "";
+      if (err?.status === 404 || errorMessage.includes("No branches found")) {
+        console.warn("No hay sucursales registradas para esta empresa");
+        setBranches([]);
+      } else {
+        console.error("Error cargando sucursales:", err);
+        toast.error("Error al cargar sucursales");
+        setBranches([]);
+      }
+    } finally {
+      setLoadingBranches(false);
+    }
+  }, [fetchBranches, currentUser?.company_id]);
+
+  const loadTransportistas = useCallback(async () => {
+    if (!currentUser?.company_id) return;
+    setLoadingTransportistas(true);
+    try {
+      const response = await fetchProviders();
+      
+      console.log("Response completo de providers:", response);
+      
+      if (!response) {
+        console.warn("Response es null o undefined");
+        setTransportistas([]);
+        return;
+      }
+
+      // Combinar acuerdos activos
+      const activeProviders = response?.active || [];
+      const pendingProviders = response?.pending || [];
+      
+      console.log("Active providers:", activeProviders);
+      console.log("Pending providers:", pendingProviders);
+      
+      // Los acuerdos activos son los que tienen status "active" o undefined
+      const allActiveAgreements = [...activeProviders];
+      
+      console.log("Total acuerdos activos:", allActiveAgreements.length);
+      console.log("Detalles de acuerdos activos:", allActiveAgreements);
+      
+      if (allActiveAgreements.length === 0) {
+        console.warn("No hay acuerdos activos disponibles");
+        setTransportistas([]);
+        return;
+      }
+
+      // Filtrar proveedores: necesitamos acuerdos donde la compañía relacionada es PROVIDER
+      // Esto significa que mi compañía es SELLER y la otra es TRANSPORTER (PROVIDER)
+      const providers: Provider[] = allActiveAgreements
+        .filter((p: any) => {
+          if (!p) {
+            console.log("Agreement es null/undefined");
+            return false;
+          }
+          
+          const isProvider = p.related_company_role === "PROVIDER";
+          const hasId = !!p.related_company_id;
+          const hasName = !!p.related_company_name;
+          
+          console.log("Evaluando agreement:", {
+            agreement_id: p.agreement_id,
+            my_role: p.my_role,
+            related_company_role: p.related_company_role,
+            related_company_id: p.related_company_id,
+            related_company_name: p.related_company_name,
+            status: p.status,
+            isProvider,
+            hasId,
+            hasName,
+            passes: isProvider && hasId && hasName,
+          });
+          
+          return isProvider && hasId && hasName;
+        })
+        .map((p: any) => {
+          console.log("Mapeando provider:", p.related_company_name);
+          return {
+            id: p.related_company_id,
+            name: p.related_company_name,
+            legal_name: p.related_company_name,
+          };
+        });
+
+      console.log("Transportistas finales cargados:", providers.length);
+      console.log("Transportistas:", providers);
+      
+      if (providers.length === 0 && allActiveAgreements.length > 0) {
+        console.warn("Hay acuerdos pero ninguno es PROVIDER. Detalles:", 
+          allActiveAgreements.map((a: any) => ({
+            my_role: a.my_role,
+            related_company_role: a.related_company_role,
+            name: a.related_company_name,
+            status: a.status,
+          }))
+        );
+      }
+      
+      setTransportistas(providers);
+    } catch (err: any) {
+      console.error("Error al cargar transportistas:", err);
+      console.error("Error completo:", JSON.stringify(err, null, 2));
+      toast.error("Error al cargar transportistas");
+      setTransportistas([]);
+    } finally {
+      setLoadingTransportistas(false);
+    }
+  }, [fetchProviders, currentUser?.company_id]);
+
+  const loadUnidadesPropias = useCallback(async () => {
+    if (!currentUser?.company_id) return;
+    setLoadingUnidades(true);
+    try {
+      const response = await fetchUnits();
+      const activeUnits = response?.active || [];
+      setUnidadesPropias(activeUnits);
+      setTieneUnidadesPropias(activeUnits.length > 0);
+    } catch (err: any) {
+      console.error("Error al cargar unidades propias:", err);
+      setUnidadesPropias([]);
+      setTieneUnidadesPropias(false);
+    } finally {
+      setLoadingUnidades(false);
+    }
+  }, [fetchUnits, currentUser?.company_id]);
+
+  const loadAll = useCallback(async () => {
+    await Promise.all([loadBranches(), loadTransportistas(), loadUnidadesPropias()]);
+  }, [loadBranches, loadTransportistas, loadUnidadesPropias]);
+
+  useEffect(() => {
+    if (show) {
+      loadAll();
+    } else {
+      // Reset form when modal closes
+      setFormData({
+        folio: "",
+        empresaTransportista: "",
+        tipoTransporte: "",
+        unidadPropia: "",
+        tipoCarga: "",
+        tipoVehiculo: "",
+        tipoCargaTransporte: "",
+        origen: "",
+        destino: "",
+        nombreCliente: "",
+        linkUbicacionCliente: "",
+        descripcion: "",
+        peso: "",
+        volumen: "",
+        fechaCarga: "",
+        horaCarga: "",
+        fechaEntrega: "",
+        horaEntrega: "",
+        contactoOrigen: "",
+        contactoDestino: "",
+        observaciones: "",
+      });
+      setSelectedOrigin(null);
+      setSelectedDestination(null);
+      setSelectedTransportista(null);
+      setSelectedUnidad(null);
+    }
+  }, [show, loadAll]);
+
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleTipoTransporteChange = (tipo: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tipoTransporte: tipo,
+      empresaTransportista: "",
+      unidadPropia: "",
+    }));
+    setSelectedTransportista(null);
+    setSelectedUnidad(null);
+  };
+
+  const handleTipoCargaChange = (tipo: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tipoCarga: tipo,
+      destino: "",
+      nombreCliente: "",
+      linkUbicacionCliente: "",
+    }));
+    setSelectedDestination(null);
+  };
+
+  const handleOriginSelect = (branch: Branch) => {
+    setSelectedOrigin(branch);
+    setFormData((prev) => ({ ...prev, origen: branch.name }));
+    setShowOriginModal(false);
+  };
+
+  const handleDestinationSelect = (branch: Branch) => {
+    setSelectedDestination(branch);
+    setFormData((prev) => ({ ...prev, destino: branch.name }));
+    setShowDestinationModal(false);
+  };
+
+  const handleTransportistaSelect = (transportista: Provider) => {
+    setSelectedTransportista(transportista);
+    setFormData((prev) => ({ ...prev, empresaTransportista: transportista.name }));
+    setShowTransportistaModal(false);
+  };
+
+  const handleUnidadSelect = (unidad: any) => {
+    setSelectedUnidad(unidad);
+    const unidadName =
+      unidad.plates || unidad.unit_identifier || unidad.box_number || "Unidad";
+    setFormData((prev) => ({ ...prev, unidadPropia: unidadName }));
+    setShowUnidadModal(false);
+  };
+
+  const handleTipoVehiculoSelect = (tipo: string) => {
+    setFormData((prev) => ({ ...prev, tipoVehiculo: tipo }));
+    setShowTipoVehiculoModal(false);
+  };
+
+  const getAvailableDestinations = (): Branch[] => {
+    if (!selectedOrigin) return branches;
+    return branches.filter((branch) => branch.id !== selectedOrigin.id);
+  };
+
+  const handleLinkBlur = async () => {
+    if (!formData.linkUbicacionCliente) return;
+    try {
+      const normalizedLink = await normalizeGoogleMapsLink(formData.linkUbicacionCliente);
+      if (normalizedLink && normalizedLink !== formData.linkUbicacionCliente) {
+        setFormData((prev) => ({ ...prev, linkUbicacionCliente: normalizedLink }));
+      }
+    } catch (error) {
+      console.error("Error normalizando link:", error);
+    }
+  };
+
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatTimeForInput = (date: Date): string => {
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+
+  const handleGuardar = async () => {
+    if (!currentUser?.company_id) {
+      toast.error("No se pudo obtener el ID de la empresa");
+      return;
+    }
+
+    if (!validateLoadForm(formData, tieneUnidadesPropias)) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const loadData = await buildLoadPayload(
+        formData,
+        selectedTransportista?.id,
+        tieneUnidadesPropias
+      );
+
+      await createLoad(loadData);
+      toast.success("Carga registrada exitosamente");
+      onSuccess();
+      onHide();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al guardar la carga");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <Modal
+        show={show}
+        onHide={onHide}
+        size="lg"
+        centered
+        dialogClassName="create-load-modal-dialog"
+        onEntered={() => {
+          const modalDialog = document.querySelector(
+            ".create-load-modal-dialog"
+          ) as HTMLElement;
+          if (modalDialog) {
+            modalDialog.style.setProperty("transform", "none", "important");
+            modalDialog.style.setProperty("-webkit-transform", "none", "important");
+            modalDialog.style.setProperty("-o-transform", "none", "important");
+            modalDialog.style.setProperty("margin-top", "15px", "important");
+          }
+        }}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Nueva Carga</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <Form>
+            <Card className="mb-3">
+              <Card.Header>
+                <strong>Información Básica</strong>
+              </Card.Header>
+              <Card.Body>
+                <Form.Group className="mb-3">
+                  <Form.Label>Folio de carga *</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.folio}
+                    onChange={(e) => handleInputChange("folio", e.target.value)}
+                    placeholder="Folio de carga"
+                  />
+                </Form.Group>
+
+                {tieneUnidadesPropias && (
+                  <>
+                    <Form.Label>Tipo de Transporte *</Form.Label>
+                    <div className="mb-3">
+                      <Form.Check
+                        type="radio"
+                        label="Unidades Propias"
+                        name="tipoTransporte"
+                        value="unidades_propias"
+                        checked={formData.tipoTransporte === "unidades_propias"}
+                        onChange={(e) =>
+                          handleTipoTransporteChange(e.target.value)
+                        }
+                      />
+                      <Form.Check
+                        type="radio"
+                        label="Empresa Transport"
+                        name="tipoTransporte"
+                        value="empresa_transport"
+                        checked={formData.tipoTransporte === "empresa_transport"}
+                        onChange={(e) =>
+                          handleTipoTransporteChange(e.target.value)
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+
+                {(!tieneUnidadesPropias ||
+                  formData.tipoTransporte === "empresa_transport") && (
+                  <Form.Group className="mb-3">
+                    <Form.Label>Empresa Transportista *</Form.Label>
+                    <Button
+                      variant="outline-secondary"
+                      onClick={() => setShowTransportistaModal(true)}
+                      className="w-100 text-start"
+                      disabled={loadingTransportistas}
+                    >
+                      {formData.empresaTransportista || "Seleccionar transportista"}
+                      <i className="fas fa-chevron-down float-end mt-1"></i>
+                    </Button>
+                  </Form.Group>
+                )}
+
+                {formData.tipoTransporte === "unidades_propias" && (
+                  <Form.Group className="mb-3">
+                    <Form.Label>Unidad Propia *</Form.Label>
+                    <Button
+                      variant="outline-secondary"
+                      onClick={() => setShowUnidadModal(true)}
+                      className="w-100 text-start"
+                      disabled={loadingUnidades}
+                    >
+                      {formData.unidadPropia || "Seleccionar unidad"}
+                      <i className="fas fa-chevron-down float-end mt-1"></i>
+                    </Button>
+                  </Form.Group>
+                )}
+
+                <Form.Label>Tipo de Carga *</Form.Label>
+                <div className="mb-3">
+                  <Form.Check
+                    type="radio"
+                    label="Cliente"
+                    name="tipoCarga"
+                    value="cliente"
+                    checked={formData.tipoCarga === "cliente"}
+                    onChange={(e) => handleTipoCargaChange(e.target.value)}
+                  />
+                  <Form.Check
+                    type="radio"
+                    label="Viaje Propio"
+                    name="tipoCarga"
+                    value="viaje_propio"
+                    checked={formData.tipoCarga === "viaje_propio"}
+                    onChange={(e) => handleTipoCargaChange(e.target.value)}
+                  />
+                </div>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Tipo de Vehículo *</Form.Label>
+                  <Button
+                    variant="outline-secondary"
+                    onClick={() => setShowTipoVehiculoModal(true)}
+                    className="w-100 text-start"
+                  >
+                    {formData.tipoVehiculo || "Seleccionar tipo de vehículo"}
+                    <i className="fas fa-chevron-down float-end mt-1"></i>
+                  </Button>
+                </Form.Group>
+
+                <Form.Label>Tipo de Carga (Seco/Congelado/Combinado) *</Form.Label>
+                <div className="mb-3">
+                  <Form.Check
+                    type="radio"
+                    label="Seco"
+                    name="tipoCargaTransporte"
+                    value="seco"
+                    checked={formData.tipoCargaTransporte === "seco"}
+                    onChange={(e) =>
+                      handleInputChange("tipoCargaTransporte", e.target.value)
+                    }
+                  />
+                  <Form.Check
+                    type="radio"
+                    label="Congelado"
+                    name="tipoCargaTransporte"
+                    value="congelado"
+                    checked={formData.tipoCargaTransporte === "congelado"}
+                    onChange={(e) =>
+                      handleInputChange("tipoCargaTransporte", e.target.value)
+                    }
+                  />
+                  <Form.Check
+                    type="radio"
+                    label="Combinado"
+                    name="tipoCargaTransporte"
+                    value="combinado"
+                    checked={formData.tipoCargaTransporte === "combinado"}
+                    onChange={(e) =>
+                      handleInputChange("tipoCargaTransporte", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <Form.Label>Origen *</Form.Label>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={loadBranches}
+                    disabled={loadingBranches}
+                  >
+                    {loadingBranches ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <i className="fas fa-sync-alt"></i>
+                    )}
+                  </Button>
+                </div>
+                <Button
+                  variant="outline-secondary"
+                  onClick={() => setShowOriginModal(true)}
+                  className="w-100 text-start mb-3"
+                  disabled={loadingBranches}
+                >
+                  {formData.origen || "Seleccionar origen"}
+                  <i className="fas fa-chevron-down float-end mt-1"></i>
+                </Button>
+
+                {formData.tipoCarga === "cliente" && (
+                  <>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Destino - Cliente</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={formData.nombreCliente}
+                        onChange={(e) =>
+                          handleInputChange("nombreCliente", e.target.value)
+                        }
+                        placeholder="Nombre del cliente *"
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Control
+                        type="text"
+                        value={formData.linkUbicacionCliente}
+                        onChange={(e) =>
+                          handleInputChange("linkUbicacionCliente", e.target.value)
+                        }
+                        onBlur={handleLinkBlur}
+                        placeholder="Link de ubicación del cliente"
+                      />
+                    </Form.Group>
+                  </>
+                )}
+
+                {formData.tipoCarga === "viaje_propio" && (
+                  <Form.Group className="mb-3">
+                    <Form.Label>Destino *</Form.Label>
+                    <Button
+                      variant="outline-secondary"
+                      onClick={() => setShowDestinationModal(true)}
+                      className="w-100 text-start"
+                      disabled={loadingBranches || !selectedOrigin}
+                    >
+                      {formData.destino || "Seleccionar destino"}
+                      <i className="fas fa-chevron-down float-end mt-1"></i>
+                    </Button>
+                  </Form.Group>
+                )}
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Descripción de la carga *</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={formData.descripcion}
+                    onChange={(e) =>
+                      handleInputChange("descripcion", e.target.value)
+                    }
+                    placeholder="Descripción de la carga"
+                  />
+                  {formData.tipoCargaTransporte && (
+                    <Form.Text className="text-muted">
+                      Se agregará automáticamente: (Carga:{" "}
+                      {formData.tipoCargaTransporte === "seco"
+                        ? "Seco"
+                        : formData.tipoCargaTransporte === "congelado"
+                        ? "Congelado"
+                        : "Combinado"}
+                      )
+                    </Form.Text>
+                  )}
+                </Form.Group>
+
+                <Row>
+                  <Col>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Peso (opcional)</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={formData.peso}
+                        onChange={(e) => handleInputChange("peso", e.target.value)}
+                        placeholder="Peso"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Volumen (opcional)</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={formData.volumen}
+                        onChange={(e) =>
+                          handleInputChange("volumen", e.target.value)
+                        }
+                        placeholder="Volumen"
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+
+            <Card className="mb-3">
+              <Card.Header>
+                <strong>Fechas y Horas</strong>
+              </Card.Header>
+              <Card.Body>
+                <Row>
+                  <Col>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Fecha de carga *</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={formData.fechaCarga}
+                        onChange={(e) =>
+                          handleInputChange("fechaCarga", e.target.value)
+                        }
+                        min={formatDateForInput(new Date())}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Hora de carga *</Form.Label>
+                      <Form.Control
+                        type="time"
+                        value={formData.horaCarga}
+                        onChange={(e) =>
+                          handleInputChange("horaCarga", e.target.value)
+                        }
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Fecha de entrega *</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={formData.fechaEntrega}
+                        onChange={(e) =>
+                          handleInputChange("fechaEntrega", e.target.value)
+                        }
+                        min={formatDateForInput(new Date())}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Hora de entrega *</Form.Label>
+                      <Form.Control
+                        type="time"
+                        value={formData.horaEntrega}
+                        onChange={(e) =>
+                          handleInputChange("horaEntrega", e.target.value)
+                        }
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+
+            <Card className="mb-3">
+              <Card.Header>
+                <strong>Contactos (Opcional)</strong>
+              </Card.Header>
+              <Card.Body>
+                <Form.Group className="mb-3">
+                  <Form.Label>Contacto origen</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.contactoOrigen}
+                    onChange={(e) =>
+                      handleInputChange("contactoOrigen", e.target.value)
+                    }
+                    placeholder="Contacto origen"
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>Contacto destino</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.contactoDestino}
+                    onChange={(e) =>
+                      handleInputChange("contactoDestino", e.target.value)
+                    }
+                    placeholder="Contacto destino"
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>Observaciones (opcional)</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={formData.observaciones}
+                    onChange={(e) =>
+                      handleInputChange("observaciones", e.target.value)
+                    }
+                    placeholder="Observaciones"
+                  />
+                </Form.Group>
+              </Card.Body>
+            </Card>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={onHide} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={handleGuardar} disabled={saving}>
+            {saving ? (
+              <>
+                <Spinner size="sm" className="me-2" />
+                Guardando...
+              </>
+            ) : (
+              "Guardar Carga"
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modales de selección */}
+      <Modal
+        show={showOriginModal}
+        onHide={() => setShowOriginModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Seleccionar Origen</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {loadingBranches ? (
+            <div className="text-center p-3">
+              <Spinner animation="border" />
+              <p className="mt-2">Cargando sucursales...</p>
+            </div>
+          ) : branches.length === 0 ? (
+            <div className="text-center p-3">
+              <i className="fas fa-store fa-3x text-muted mb-3"></i>
+              <p className="text-muted">
+                No hay sucursales disponibles
+              </p>
+              <p className="text-muted small">
+                Ve a "Mi Empresa" → "Sucursales" para crear una nueva sucursal
+              </p>
+            </div>
+          ) : (
+            <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+              {branches.map((branch) => (
+                <Button
+                  key={branch.id}
+                  variant="outline-primary"
+                  className="w-100 mb-2 text-start"
+                  onClick={() => handleOriginSelect(branch)}
+                >
+                  <div>
+                    <strong>{branch.name}</strong>
+                    {branch.address && (
+                      <div className="text-muted small">{branch.address}</div>
+                    )}
+                  </div>
+                </Button>
+              ))}
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
+
+      <Modal
+        show={showDestinationModal}
+        onHide={() => setShowDestinationModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Seleccionar Destino</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {getAvailableDestinations().length === 0 ? (
+            <p className="text-muted text-center">No hay destinos disponibles</p>
+          ) : (
+            <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+              {getAvailableDestinations().map((branch) => (
+                <Button
+                  key={branch.id}
+                  variant="outline-primary"
+                  className="w-100 mb-2 text-start"
+                  onClick={() => handleDestinationSelect(branch)}
+                >
+                  <div>
+                    <strong>{branch.name}</strong>
+                    {branch.address && (
+                      <div className="text-muted small">{branch.address}</div>
+                    )}
+                  </div>
+                </Button>
+              ))}
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
+
+      <Modal
+        show={showTransportistaModal}
+        onHide={() => setShowTransportistaModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Seleccionar Transportista</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {loadingTransportistas ? (
+            <div className="text-center p-3">
+              <Spinner animation="border" />
+              <p className="mt-2">Cargando transportistas...</p>
+            </div>
+          ) : transportistas.length === 0 ? (
+            <div className="text-center p-3">
+              <i className="fas fa-truck fa-3x text-muted mb-3"></i>
+              <p className="text-muted">
+                No hay transportistas registrados
+              </p>
+              <p className="text-muted small">
+                Ve a "Mi Empresa" → "Proveedores" para agregar transportistas
+              </p>
+            </div>
+          ) : (
+            <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+              {transportistas.map((transportista) => (
+                <Button
+                  key={transportista.id}
+                  variant="outline-primary"
+                  className="w-100 mb-2 text-start"
+                  onClick={() => handleTransportistaSelect(transportista)}
+                >
+                  <div>
+                    <strong>{transportista.name}</strong>
+                    {transportista.legal_name && (
+                      <div className="text-muted small">
+                        {transportista.legal_name}
+                      </div>
+                    )}
+                  </div>
+                </Button>
+              ))}
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
+
+      <Modal
+        show={showUnidadModal}
+        onHide={() => setShowUnidadModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Seleccionar Unidad Propia</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {unidadesPropias.length === 0 ? (
+            <p className="text-muted text-center">
+              No hay unidades propias registradas
+            </p>
+          ) : (
+            <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+              {unidadesPropias.map((unidad) => (
+                <Button
+                  key={unidad.id}
+                  variant="outline-primary"
+                  className="w-100 mb-2 text-start"
+                  onClick={() => handleUnidadSelect(unidad)}
+                >
+                  <div>
+                    <strong>
+                      {unidad.plates ||
+                        unidad.unit_identifier ||
+                        unidad.box_number ||
+                        "Unidad"}
+                    </strong>
+                    {unidad.type && (
+                      <div className="text-muted small">{unidad.type}</div>
+                    )}
+                  </div>
+                </Button>
+              ))}
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
+
+      <Modal
+        show={showTipoVehiculoModal}
+        onHide={() => setShowTipoVehiculoModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Seleccionar Tipo de Vehículo</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+            {VEHICLE_TYPES.map((tipo) => (
+              <Button
+                key={tipo}
+                variant="outline-primary"
+                className="w-100 mb-2 text-start"
+                onClick={() => handleTipoVehiculoSelect(tipo)}
+              >
+                {tipo}
+              </Button>
+            ))}
+          </div>
+        </Modal.Body>
+      </Modal>
+    </>
+  );
+};
+
+export default CreateLoadModal;
+

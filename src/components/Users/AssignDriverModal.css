@@ -1,0 +1,9 @@
+/* Sobrescribir el estilo global que mueve los modales al 30% */
+.modal.show .modal-dialog.assign-driver-modal-dialog {
+  -webkit-transform: none !important;
+  -o-transform: none !important;
+  transform: none !important;
+  margin-top: 15px !important;
+  margin-bottom: auto !important;
+}
+

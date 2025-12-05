@@ -3,7 +3,7 @@ import Dashboard from "./views/Dashboard";
 import UserProfile from "./views/UserProfile";
 import Users from "./views/Users";
 import TableList from "./views/TableList";
-import Typography from "./views/Typography";
+import Cargas from "./views/Cargas";
 import Icons from "./views/Icons";
 import Maps from "./views/Maps";
 import Notifications from "./views/Notifications";
@@ -64,10 +64,10 @@ const maestroRoutes: DashboardRoute[] = [
         layout: "/maestro"
     },
     {
-        path: "/typography",
-        name: "Typography",
-        icon: "nc-icon nc-paper-2",
-        component: Typography,
+        path: "/cargas",
+        name: "Cargas",
+        icon: "nc-icon nc-delivery-fast",
+        component: Cargas,
         layout: "/maestro"
     },
     {
