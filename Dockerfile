@@ -5,6 +5,15 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+
+# Pasar variables como ARG
+ARG VITE_API_URL
+ARG VITE_SSE_URL
+
+# También definir ENV para que Vite las lea
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_SSE_URL=${VITE_SSE_URL}
+
 RUN npm run build
 
 FROM nginx:alpine
