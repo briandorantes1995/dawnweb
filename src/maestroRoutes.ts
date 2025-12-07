@@ -2,11 +2,8 @@ import React from "react";
 import Dashboard from "./views/Dashboard";
 import UserProfile from "./views/UserProfile";
 import Users from "./views/Users";
-import TableList from "./views/TableList";
 import Cargas from "./views/Cargas";
-import Icons from "./views/Icons";
 import Maps from "./views/Maps";
-import Notifications from "./views/Notifications";
 import Units from "./views/Units";
 import Trailers from "./views/Trailers";
 
@@ -31,7 +28,7 @@ const maestroRoutes: DashboardRoute[] = [
       {
         path: "/perfil",
         name: "Perfil",
-        icon: "nc-icon nc-chart-pie-35",
+        icon: "nc-icon nc-badge",
         component: UserProfile,
         layout: "/maestro"
     },
@@ -57,13 +54,6 @@ const maestroRoutes: DashboardRoute[] = [
             layout: "/maestro"
         },
     {
-        path: "/table",
-        name: "Table List",
-        icon: "nc-icon nc-notes",
-        component: TableList,
-        layout: "/maestro"
-    },
-    {
         path: "/cargas",
         name: "Cargas",
         icon: "nc-icon nc-delivery-fast",
@@ -71,24 +61,10 @@ const maestroRoutes: DashboardRoute[] = [
         layout: "/maestro"
     },
     {
-        path: "/icons",
-        name: "Icons",
-        icon: "nc-icon nc-atom",
-        component: Icons,
-        layout: "/maestro"
-    },
-    {
         path: "/maps",
         name: "Maps",
         icon: "nc-icon nc-pin-3",
         component: Maps,
-        layout: "/maestro"
-    },
-    {
-        path: "/notifications",
-        name: "Notifications",
-        icon: "nc-icon nc-bell-55",
-        component: Notifications,
         layout: "/maestro"
     },
 ];

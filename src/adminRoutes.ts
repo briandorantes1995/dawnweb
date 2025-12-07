@@ -2,11 +2,8 @@ import React from "react";
 import Dashboard from "./views/Dashboard";
 import UserProfile from "./views/UserProfile";
 import Users from "./views/Users";
-import TableList from "./views/TableList";
 import Cargas from "./views/Cargas";
-import Icons from "./views/Icons";
 import Maps from "./views/Maps";
-import Notifications from "./views/Notifications";
 import Units from "./views/Units";
 import Trailers from "./views/Trailers";
 
@@ -33,7 +30,7 @@ const adminRoutes: DashboardRoute[] = [
    {
     path: "/perfil",
     name: "Perfil",
-    icon: "nc-icon nc-chart-pie-35",
+    icon: "nc-icon nc-badge",
     component: UserProfile,
     layout: "/admin"
   },
@@ -59,24 +56,10 @@ const adminRoutes: DashboardRoute[] = [
     layout: "/admin"
   },
   {
-    path: "/table",
-    name: "Table List",
-    icon: "nc-icon nc-notes",
-    component: TableList,
-    layout: "/admin"
-  },
-  {
     path: "/cargas",
     name: "Cargas",
     icon: "nc-icon nc-delivery-fast",
     component: Cargas,
-    layout: "/admin"
-  },
-  {
-    path: "/icons",
-    name: "Icons",
-    icon: "nc-icon nc-atom",
-    component: Icons,
     layout: "/admin"
   },
   {
@@ -86,13 +69,6 @@ const adminRoutes: DashboardRoute[] = [
     component: Maps,
     layout: "/admin"
   },
-  {
-    path: "/notifications",
-    name: "Notifications",
-    icon: "nc-icon nc-bell-55",
-    component: Notifications,
-    layout: "/admin"
-  }
 ];
 
 export default adminRoutes;
