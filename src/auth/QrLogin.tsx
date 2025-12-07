@@ -21,10 +21,13 @@ const QrLogin: React.FC<{ onLogin: (data: any) => void }> = ({ onLogin }) => {
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const connectSocket = (session: string) => {
-        if (socketRef.current) {
-            socketRef.current.disconnect();
+        if (socketRef.current && socketRef.current.connected) {
+            socketRef.current.off("qr:authenticated");
+            socketRef.current.emit("qr-session", { sessionId: session });
+            return;
         }
 
+        // Crear nuevo socket
         const socket = io(import.meta.env.VITE_API_URL, {
             transports: ["websocket"],
         });
@@ -33,12 +36,15 @@ const QrLogin: React.FC<{ onLogin: (data: any) => void }> = ({ onLogin }) => {
             socket.emit("qr-session", { sessionId: session });
         });
 
+        // EVITAR listeners duplicados
+        socket.off("qr:authenticated");
         socket.on("qr:authenticated", (payload) => {
             onLogin(payload);
         });
 
         socketRef.current = socket;
     };
+
 
     const fetchQr = async () => {
         if (refreshCount >= MAX_REFRESHES) {
