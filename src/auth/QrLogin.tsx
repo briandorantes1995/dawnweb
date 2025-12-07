@@ -30,7 +30,7 @@ const QrLogin: React.FC<{ onLogin: (data: any) => void }> = ({ onLogin }) => {
         });
 
         socket.on("connect", () => {
-            socket.emit("qr:join", session);
+            socket.emit("qr-session", { sessionId: session });
         });
 
         socket.on("qr:authenticated", (payload) => {
