@@ -1,4 +1,5 @@
 import React from "react";
+import TasksPanel from "../components/Tasks/Tasks";
 import {Badge, Button, Card, Navbar, Nav, Table, Container, Row, Col, Form, OverlayTrigger, Tooltip,} from "react-bootstrap";
 import {LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, Legend, ResponsiveContainer, CartesianGrid,} from "recharts";
 
@@ -266,83 +267,9 @@ const Dashboard: React.FC = () => {
 
           {/* ==== TASKS ==== */}
           <Col md="6">
-            <Card className="card-tasks">
-              <Card.Header>
-                <Card.Title as="h4">Tasks</Card.Title>
-                <p className="card-category">Backend development</p>
-              </Card.Header>
-
-              <Card.Body>
-                <div className="table-full-width">
-                  <Table>
-                    <tbody>
-                    {[
-                      `Sign contract for "What are conference organizers afraid of?"`,
-                      `Lines From Great Russian Literature? Or E-mails From My Boss?`,
-                      `Flooded: One year later, assessing what was lost...`,
-                      `Create 4 Invisible User Experiences you Never Knew About`,
-                      `Read "Following makes Medium better"`,
-                      `Unfollow 5 enemies from twitter`,
-                    ].map((task, i) => (
-                        <tr key={i}>
-                          <td>
-                            <Form.Check className="mb-1 pl-0">
-                              <Form.Check.Label>
-                                <Form.Check.Input
-                                    type="checkbox"
-                                    defaultChecked={i > 0 && i < 5}
-                                    disabled={i === 5}
-                                />
-                                <span className="form-check-sign" />
-                              </Form.Check.Label>
-                            </Form.Check>
-                          </td>
-
-                          <td>{task}</td>
-
-                          <td className="td-actions text-right">
-                            <OverlayTrigger
-                                overlay={<Tooltip id={`edit-${i}`}>Edit Task</Tooltip>}
-                            >
-                              <Button
-                                  className="btn-simple btn-link p-1"
-                                  type="button"
-                                  variant="info"
-                              >
-                                <i className="fas fa-edit"></i>
-                              </Button>
-                            </OverlayTrigger>
-
-                            <OverlayTrigger
-                                overlay={
-                                  <Tooltip id={`remove-${i}`}>Remove</Tooltip>
-                                }
-                            >
-                              <Button
-                                  className="btn-simple btn-link p-1"
-                                  type="button"
-                                  variant="danger"
-                              >
-                                <i className="fas fa-times"></i>
-                              </Button>
-                            </OverlayTrigger>
-                          </td>
-                        </tr>
-                    ))}
-                    </tbody>
-                  </Table>
-                </div>
-              </Card.Body>
-
-              <Card.Footer>
-                <hr />
-                <div className="stats">
-                  <i className="now-ui-icons loader_refresh spin"></i>
-                  Updated 3 minutes ago
-                </div>
-              </Card.Footer>
-            </Card>
+            <TasksPanel />
           </Col>
+
         </Row>
       </Container>
   );

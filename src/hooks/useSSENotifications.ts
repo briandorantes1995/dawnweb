@@ -82,10 +82,10 @@ export function useSSENotifications() {
                         }
                     });
 
-                    read(); // continuar escuchando
+                    await read(); // continuar escuchando
                 };
 
-                read();
+                await read();
 
             } catch (error) {
                 console.error(" SSE ERROR:", error);
