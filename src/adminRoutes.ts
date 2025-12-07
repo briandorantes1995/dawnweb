@@ -23,7 +23,7 @@ const adminRoutes: DashboardRoute[] = [
   {
     path: "/dashboard",
     name: "Dashboard",
-    icon: "nc-icon nc-chart-pie-35",
+    icon: "nc-icon nc-chart-bar-axis-x",
     component: Dashboard,
     layout: "/admin"
   },
