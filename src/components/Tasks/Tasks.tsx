@@ -15,8 +15,8 @@ const TasksPanel: React.FC = () => {
     return (
         <Card className="card-tasks">
             <Card.Header>
-                <Card.Title as="h4">Tasks</Card.Title>
-                <p className="card-category">Personal task list</p>
+                <Card.Title as="h4">Tareas/Pendientes</Card.Title>
+                <p className="card-category">Lista Personal de Tareas</p>
             </Card.Header>
 
             <Card.Body>
@@ -24,7 +24,7 @@ const TasksPanel: React.FC = () => {
                 <div className="d-flex mb-3">
                     <Form.Control
                         type="text"
-                        placeholder="Add new task..."
+                        placeholder="Agregar nueva tarea..."
                         value={newTask}
                         onChange={(e) => setNewTask(e.target.value)}
                     />
@@ -65,7 +65,7 @@ const TasksPanel: React.FC = () => {
 
                                 <td className="td-actions text-right">
                                     <OverlayTrigger
-                                        overlay={<Tooltip>Edit Task</Tooltip>}
+                                        overlay={<Tooltip>Editar Tarea</Tooltip>}
                                     >
                                         <Button
                                             className="btn-simple btn-link p-1"
@@ -78,7 +78,7 @@ const TasksPanel: React.FC = () => {
                                     </OverlayTrigger>
 
                                     <OverlayTrigger
-                                        overlay={<Tooltip>Delete</Tooltip>}
+                                        overlay={<Tooltip>Borrar</Tooltip>}
                                     >
                                         <Button
                                             className="btn-simple btn-link p-1"
@@ -101,7 +101,7 @@ const TasksPanel: React.FC = () => {
                 <hr />
                 <div className="stats">
                     <i className="now-ui-icons loader_refresh spin"></i>
-                    Updated just now
+                    Actualizado justo ahora.
                 </div>
             </Card.Footer>
         </Card>
