@@ -36,6 +36,11 @@ const QrLogin: React.FC<{ onLogin: (data: any) => void }> = ({ onLogin }) => {
             socket.emit("qr-session", { sessionId: session });
         });
 
+        socket.on("connect_error", (err) => {
+            console.log("CONNECT ERROR:", err.message);
+        });
+
+
         // EVITAR listeners duplicados
         socket.off("qr:authenticated");
         socket.on("qr:authenticated", (payload) => {
