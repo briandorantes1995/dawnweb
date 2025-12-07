@@ -1,30 +1,17 @@
-import { apiFetch } from "./apiFetch";
+// src/api/tasks.api.ts
+import { useApiFetch } from "../hooks/useFetch";
 
+export function useTasksApi() {
+    const api = useApiFetch();
 
-export async function fetchTasks() {
-    return apiFetch("/tasks");
+    return {
+        getTasks: () => api.get<any[]>("/tasks"),
+        createTask: (text: string) => api.post<any>("/tasks", { text }),
+        updateTask: (id: string, data: any) => api.patch<any>(`/tasks/${id}`, data),
+        deleteTask: (id: string) => api.del<any>(`/tasks/${id}`),
+    };
 }
 
-
-export async function createTask(text: string) {
-    return apiFetch("/tasks", {
-        method: "POST",
-        body: JSON.stringify({ text }),
-    });
-}
-
-export async function updateTask(id: string, data: { text?: string; status?: string }) {
-    return apiFetch(`/tasks/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-    });
-}
-
-export async function deleteTask(id: string) {
-    return apiFetch(`/tasks/${id}`, {
-        method: "DELETE",
-    });
-}
 
 
 

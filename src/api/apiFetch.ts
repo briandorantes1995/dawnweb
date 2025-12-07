@@ -1,14 +1,15 @@
+// src/api/apiFetch.ts
 import { store } from "../store/store";
 import { setSession } from "../store/slices/authSlice";
 
-const API_URL = import.meta.env.VITE_SSE_URL; // mismo host donde están /tasks
+const API_URL = import.meta.env.VITE_SSE_URL;
 
-export async function apiFetch(
+export async function apiFetch<T = any>(
     endpoint: string,
     options: RequestInit = {},
     accessToken?: string,
     refreshToken?: string
-): Promise<any> {
+): Promise<T> {
 
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -22,7 +23,7 @@ export async function apiFetch(
     const url = `${API_URL}${endpoint.startsWith("/") ? endpoint : "/" + endpoint}`;
     let res = await fetch(url, { ...options, headers });
 
-    // 🔄 Token expirado → intentar refresh
+    // 🔄 Intentar refresh
     if (res.status === 401 && refreshToken) {
         const refreshed = await attemptRefresh(refreshToken);
 
@@ -39,11 +40,11 @@ export async function apiFetch(
         throw new Error(`Error ${res.status}: ${msg}`);
     }
 
-    return res.json();
+    return res.json() as Promise<T>;
 }
 
 /********************************************
- * 🔄 Same refreshToken logic as SSE version
+ * 🔄 Refresh Token
  ********************************************/
 async function attemptRefresh(refreshToken: string) {
     try {
@@ -75,3 +76,4 @@ async function attemptRefresh(refreshToken: string) {
         return null;
     }
 }
+

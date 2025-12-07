@@ -1,32 +1,35 @@
+// src/hooks/useTasks.ts
 import { useEffect, useState } from "react";
-import { fetchTasks, createTask, updateTask, deleteTask } from "../api/tasks";
+import { useTasksApi } from "../api/tasks";
 
 export function useTasks() {
+    const { getTasks, createTask, updateTask, deleteTask } = useTasksApi();
+
     const [tasks, setTasks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     async function load() {
         setLoading(true);
-        const data = await fetchTasks();
-        setTasks(data);
+        const list = await getTasks();
+        setTasks(list);
         setLoading(false);
     }
 
     async function add(text: string) {
-        const newTask = await createTask(text);
-        setTasks((t) => [newTask, ...t]);
+        const t = await createTask(text);
+        setTasks((prev) => [t, ...prev]);
     }
 
     async function toggle(task: any) {
         const updated = await updateTask(task.id, {
             status: task.status === "pending" ? "done" : "pending",
         });
-        setTasks((t) => t.map((x) => (x.id === task.id ? updated : x)));
+        setTasks((prev) => prev.map((x) => (x.id === task.id ? updated : x)));
     }
 
     async function remove(task: any) {
         await deleteTask(task.id);
-        setTasks((t) => t.filter((x) => x.id !== task.id));
+        setTasks((prev) => prev.filter((x) => x.id !== task.id));
     }
 
     useEffect(() => {
@@ -35,4 +38,5 @@ export function useTasks() {
 
     return { tasks, add, toggle, remove, loading };
 }
+
 
