@@ -1,7 +1,13 @@
 import React from "react";
 import TasksPanel from "../components/Tasks/Tasks";
-import {Badge, Button, Card, Navbar, Nav, Table, Container, Row, Col, Form, OverlayTrigger, Tooltip,} from "react-bootstrap";
-import {LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, Legend, ResponsiveContainer, CartesianGrid,} from "recharts";
+import DashboardCard from "../components/Dashboard/DashboardCard";
+import StatCard from "../components/Dashboard/StatCard";
+import SectionTitle from "../components/Dashboard/SectionTitle";
+import PanelContainer from "../components/Dashboard/PanelContainer";
+import {Container, Row, Col,} from "react-bootstrap";
+import {LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, Legend, ResponsiveContainer,
+  CartesianGrid,} from "recharts";
+
 
 const Dashboard: React.FC = () => {
   // DATASETS
@@ -37,242 +43,158 @@ const Dashboard: React.FC = () => {
     { name: "Dec", a: 895, b: 695 },
   ];
 
-  // COLORS
   const pieColors = ["#17a2b8", "#dc3545", "#ffc107"];
 
   return (
       <Container fluid>
-        {/* ==== CARDS SUPERIORES ==== */}
+
+        {/* ======================================================
+          TOP STAT CARDS
+      ====================================================== */}
         <Row>
           <Col lg="3" sm="6">
-            <Card className="card-stats">
-              <Card.Body>
-                <Row>
-                  <Col xs="5">
-                    <div className="icon-big text-center icon-warning">
-                      <i className="nc-icon nc-chart text-warning"></i>
-                    </div>
-                  </Col>
-                  <Col xs="7">
-                    <div className="numbers">
-                      <p className="card-category">Number</p>
-                      <Card.Title as="h4">150GB</Card.Title>
-                    </div>
-                  </Col>
-                </Row>
-              </Card.Body>
-              <Card.Footer>
-                <hr />
-                <div className="stats">
-                  <i className="fas fa-redo mr-1"></i>
-                  Update Now
-                </div>
-              </Card.Footer>
-            </Card>
+            <StatCard
+                label="Number"
+                value="150GB"
+                icon={<i className="nc-icon nc-chart text-warning"></i>}
+                color="#ffc107"
+            />
           </Col>
 
           <Col lg="3" sm="6">
-            <Card className="card-stats">
-              <Card.Body>
-                <Row>
-                  <Col xs="5">
-                    <div className="icon-big text-center icon-warning">
-                      <i className="nc-icon nc-light-3 text-success"></i>
-                    </div>
-                  </Col>
-                  <Col xs="7">
-                    <div className="numbers">
-                      <p className="card-category">Revenue</p>
-                      <Card.Title as="h4">$ 1,345</Card.Title>
-                    </div>
-                  </Col>
-                </Row>
-              </Card.Body>
-              <Card.Footer>
-                <hr />
-                <div className="stats">
-                  <i className="far fa-calendar-alt mr-1"></i>
-                  Last day
-                </div>
-              </Card.Footer>
-            </Card>
+            <StatCard
+                label="Revenue"
+                value="$ 1,345"
+                icon={<i className="nc-icon nc-light-3 text-success"></i>}
+                color="#28a745"
+            />
           </Col>
 
           <Col lg="3" sm="6">
-            <Card className="card-stats">
-              <Card.Body>
-                <Row>
-                  <Col xs="5">
-                    <div className="icon-big text-center icon-warning">
-                      <i className="nc-icon nc-vector text-danger"></i>
-                    </div>
-                  </Col>
-                  <Col xs="7">
-                    <div className="numbers">
-                      <p className="card-category">Errors</p>
-                      <Card.Title as="h4">23</Card.Title>
-                    </div>
-                  </Col>
-                </Row>
-              </Card.Body>
-              <Card.Footer>
-                <hr />
-                <div className="stats">
-                  <i className="far fa-clock-o mr-1"></i>
-                  In the last hour
-                </div>
-              </Card.Footer>
-            </Card>
+            <StatCard
+                label="Errors"
+                value="23"
+                icon={<i className="nc-icon nc-vector text-danger"></i>}
+                color="#dc3545"
+            />
           </Col>
 
           <Col lg="3" sm="6">
-            <Card className="card-stats">
-              <Card.Body>
-                <Row>
-                  <Col xs="5">
-                    <div className="icon-big text-center icon-warning">
-                      <i className="nc-icon nc-favourite-28 text-primary"></i>
-                    </div>
-                  </Col>
-                  <Col xs="7">
-                    <div className="numbers">
-                      <p className="card-category">Followers</p>
-                      <Card.Title as="h4">+45K</Card.Title>
-                    </div>
-                  </Col>
-                </Row>
-              </Card.Body>
-              <Card.Footer>
-                <hr />
-                <div className="stats">
-                  <i className="fas fa-redo mr-1"></i>
-                  Update now
-                </div>
-              </Card.Footer>
-            </Card>
+            <StatCard
+                label="Followers"
+                value="+45K"
+                icon={<i className="nc-icon nc-favourite-28 text-primary"></i>}
+                color="#007bff"
+            />
           </Col>
         </Row>
 
-        {/* ==== USERS BEHAVIOR ==== */}
+
+        {/* ======================================================
+          USERS BEHAVIOR + EMAIL STATS
+      ====================================================== */}
         <Row>
           <Col md="8">
-            <Card>
-              <Card.Header>
-                <Card.Title as="h4">Users Behavior</Card.Title>
-                <p className="card-category">24 Hours performance</p>
-              </Card.Header>
+            <PanelContainer>
+              <SectionTitle>Users Behavior</SectionTitle>
+              <p className="text-white-50">24 Hours performance</p>
 
-              <Card.Body>
-                <div style={{ width: "100%", height: 300 }}>
-                  <ResponsiveContainer>
-                    <LineChart data={usersBehavior}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <ChartTooltip />
-                      <Legend />
+              <div style={{ width: "100%", height: 300 }}>
+                <ResponsiveContainer>
+                  <LineChart data={usersBehavior}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <ChartTooltip />
+                    <Legend />
 
-                      <Line type="monotone" dataKey="a" stroke="#17a2b8" />
-                      <Line type="monotone" dataKey="b" stroke="#dc3545" />
-                      <Line type="monotone" dataKey="c" stroke="#ffc107" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card.Body>
+                    <Line dataKey="a" stroke="#17a2b8" />
+                    <Line dataKey="b" stroke="#dc3545" />
+                    <Line dataKey="c" stroke="#ffc107" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
 
-              <Card.Footer>
-                <hr />
-                <div className="stats">
-                  <i className="fas fa-history"></i> Updated 3 minutes ago
-                </div>
-              </Card.Footer>
-            </Card>
+              <div className="mt-3 text-white-50">
+                <i className="fas fa-history"></i> Updated 3 minutes ago
+              </div>
+            </PanelContainer>
           </Col>
 
-          {/* ==== EMAIL STATS ==== */}
           <Col md="4">
-            <Card>
-              <Card.Header>
-                <Card.Title as="h4">Email Statistics</Card.Title>
-                <p className="card-category">Last Campaign Performance</p>
-              </Card.Header>
+            <PanelContainer>
+              <SectionTitle>Email Statistics</SectionTitle>
+              <p className="text-white-50">Last Campaign Performance</p>
 
-              <Card.Body>
-                <div style={{ width: "100%", height: 250 }}>
-                  <ResponsiveContainer>
-                    <PieChart>
-                      <Pie
-                          data={emailStats}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          dataKey="value"
-                          label
-                      >
-                        {emailStats.map((_, i) => (
-                            <Cell key={i} fill={pieColors[i]} />
-                        ))}
-                      </Pie>
-                      <ChartTooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card.Body>
+              <div style={{ width: "100%", height: 250 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                        data={emailStats}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="value"
+                        label
+                    >
+                      {emailStats.map((_, i) => (
+                          <Cell key={i} fill={pieColors[i]} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
 
-              <Card.Footer>
-                <hr />
-                <div className="stats">
-                  <i className="far fa-clock"></i> Campaign sent 2 days ago
-                </div>
-              </Card.Footer>
-            </Card>
+              <div className="mt-3 text-white-50">
+                <i className="far fa-clock"></i> Campaign sent 2 days ago
+              </div>
+            </PanelContainer>
           </Col>
         </Row>
 
-        {/* ==== SALES ==== */}
+
+        {/* ======================================================
+          SALES + TASKS PANEL
+      ====================================================== */}
         <Row>
           <Col md="6">
-            <Card>
-              <Card.Header>
-                <Card.Title as="h4">2017 Sales</Card.Title>
-                <p className="card-category">All products including Taxes</p>
-              </Card.Header>
+            <PanelContainer>
+              <SectionTitle>2017 Sales</SectionTitle>
+              <p className="text-white-50">All products including Taxes</p>
 
-              <Card.Body>
-                <div style={{ width: "100%", height: 300 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={salesData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <ChartTooltip />
-                      <Legend />
+              <div style={{ width: "100%", height: 300 }}>
+                <ResponsiveContainer>
+                  <BarChart data={salesData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <ChartTooltip />
+                    <Legend />
 
-                      <Bar dataKey="a" name="Tesla Model S" fill="#17a2b8" />
-                      <Bar dataKey="b" name="BMW 5 Series" fill="#dc3545" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card.Body>
+                    <Bar dataKey="a" name="Tesla Model S" fill="#17a2b8" />
+                    <Bar dataKey="b" name="BMW 5 Series" fill="#dc3545" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
 
-              <Card.Footer>
-                <hr />
-                <div className="stats">
-                  <i className="fas fa-check"></i> Data information certified
-                </div>
-              </Card.Footer>
-            </Card>
+              <div className="mt-3 text-white-50">
+                <i className="fas fa-check"></i> Data information certified
+              </div>
+            </PanelContainer>
           </Col>
 
-          {/* ==== TASKS ==== */}
           <Col md="6">
-            <TasksPanel />
+            <PanelContainer>
+              <SectionTitle>Tasks</SectionTitle>
+              <TasksPanel />
+            </PanelContainer>
           </Col>
-
         </Row>
       </Container>
   );
 };
 
 export default Dashboard;
+
