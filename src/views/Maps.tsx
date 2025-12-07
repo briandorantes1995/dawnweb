@@ -148,7 +148,7 @@ const Maps: React.FC = () => {
 
     const socket = io(import.meta.env.VITE_API_URL, {
       transports: ["websocket"],
-      auth: { token: accessToken }
+      auth: { mode: "qr" }  // <--- clave absoluta
     });
 
     socketRef.current = socket;
