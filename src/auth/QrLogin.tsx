@@ -30,6 +30,7 @@ const QrLogin: React.FC<{ onLogin: (data: any) => void }> = ({ onLogin }) => {
         // Crear nuevo socket
         const socket = io(import.meta.env.VITE_API_URL, {
             transports: ["websocket"],
+            auth: { mode: "qr" }
         });
 
         socket.on("connect", () => {
