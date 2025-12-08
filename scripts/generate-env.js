@@ -1,4 +1,4 @@
-const fs = require("fs");
+import fs from "fs";
 
 const env = `
 window.__ENV__ = {
@@ -9,3 +9,4 @@ window.__ENV__ = {
 
 fs.writeFileSync("public/env.js", env);
 console.log("Archivo public/env.js generado ✅");
+
