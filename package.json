@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prebuild": "ts-node scripts/generate-env.ts",
+    "prebuild": "node scripts/generate-env.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
