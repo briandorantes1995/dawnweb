@@ -9,3 +9,7 @@ interface ImportMeta {
     readonly env: ImportMetaEnv;
 }
 
+interface Window {
+  importMetaEnv: ImportMetaEnv;
+}
+

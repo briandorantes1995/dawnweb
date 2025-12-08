@@ -27,8 +27,6 @@ const container = document.getElementById("root");
 if (!container) throw new Error("No se encontró el elemento root");
 
 const root = ReactDOM.createRoot(container);
-console.log("🚀 VITE_API_URL:", import.meta.env.VITE_API_URL);
-console.log("🚀 VITE_SSE_URL:", import.meta.env.VITE_SSE_URL);
 
 
 root.render(
