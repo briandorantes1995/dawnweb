@@ -2,7 +2,7 @@
 import { store } from "../store/store";
 import { setSession } from "../store/slices/authSlice";
 
-const API_URL = import.meta.env.VITE_SSE_URL;
+const API_URL = import.meta.env.VITE_SSE_URL || "https://microservicio-notificacionespush-production.up.railway.app";
 
 export async function apiFetch<T = any>(
     endpoint: string,

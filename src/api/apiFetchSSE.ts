@@ -1,7 +1,7 @@
 import { store } from "../store/store";
 import { setSession } from "../store/slices/authSlice";
 
-const SSE_URL = import.meta.env.VITE_SSE_URL;
+const SSE_URL = import.meta.env.VITE_SSE_URL || "https://microservicio-notificacionespush-production.up.railway.app";
 
 export async function apiFetchSSE(
     endpoint: string,
