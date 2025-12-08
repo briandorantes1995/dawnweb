@@ -8,34 +8,29 @@ import { exchangeTokenThunk } from "../store/auththunks";
 export default function OAuthCallback() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+useEffect(() => {
+  const hash = window.location.hash.replace("#", "");
+  const params = new URLSearchParams(hash);
 
-  useEffect(() => {
-    const params = new URLSearchParams(
-      window.location.hash.startsWith("#")
-        ? window.location.hash.replace("#", "?")
-        : window.location.search
-    );
+  const accessToken = params.get("access_token");
 
-    const code = params.get("code");
-    const state = params.get("state");
+  if (!accessToken) {
+    navigate("/login?error=no_token");
+    return;
+  }
 
-    if (!code || !state) {
-      navigate("/login?error=missing_params");
-      return;
+  async function login() {
+    try {
+      await dispatch(exchangeTokenThunk({ accessToken })).unwrap();
+      navigate("/login?oauth=success");
+    } catch (err) {
+      console.error(err);
+      navigate("/login?error=exchange_failed");
     }
+  }
 
-    async function processLogin() {
-      try {
-        await dispatch(exchangeTokenThunk({ code, state }));
-        navigate("/admin/dashboard");
-      } catch (err) {
-        console.error("OAuth Error:", err);
-        navigate("/login?error=oauth_failed");
-      }
-    }
-
-    processLogin();
-  }, [dispatch, navigate]);
+  login();
+}, []);
 
   return (
     <div className="content">

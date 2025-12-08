@@ -102,23 +102,30 @@ export const oauthLoginThunk = createAsyncThunk(
  */
 export const exchangeTokenThunk = createAsyncThunk(
   "auth/exchangeToken",
-  async ({ code, state }: { code: string; state: string }, { rejectWithValue, dispatch }) => {
+  async ({ accessToken }: { accessToken: string }, { rejectWithValue, dispatch }) => {
     try {
       const data = await apiFetch<{
-        token: { accessToken: string; refreshToken: string };
+        token: { accessToken: string; refreshToken: string } | null;
         user: any;
+        exists: boolean;
+        complete: boolean;
+        userId: string;
       }>("/auth/exchange-token", {
         method: "POST",
-        body: JSON.stringify({ code, state }),
+        body: JSON.stringify({ accessToken }),
       });
+
+      if (data.token) {
         dispatch(
-            setSession({
-                user: data.user,
-                accessToken: data.token.accessToken,
-                refreshToken: data.token.refreshToken,
-            })
+          setSession({
+            user: data.user,
+            accessToken: data.token.accessToken,
+            refreshToken: data.token.refreshToken,
+          })
         );
-        return data.user;
+      }
+
+      return data;
     } catch (err: any) {
       return rejectWithValue(err.message || "Error intercambiando token");
     }
