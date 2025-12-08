@@ -1,3 +1,12 @@
+// Manejo de variables runtime desde Coolify
+// @ts-ignore
+if (!import.meta.env.VITE_API_URL && window.__ENV__) {
+  // @ts-ignore
+  Object.defineProperty(import.meta, "env", {
+    value: window.__ENV__
+  });
+}
+
 /*!
 =========================================================
 * Light Bootstrap Dashboard React - Typescript Migration

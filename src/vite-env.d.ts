@@ -11,5 +11,6 @@ interface ImportMeta {
 
 interface Window {
   importMetaEnv: ImportMetaEnv;
+    __ENV__?: ImportMetaEnv;
 }
 
