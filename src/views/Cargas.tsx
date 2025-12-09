@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Tabs, Tab, Card, Table, Spinner, Container, Button, Badge, ButtonGroup } from "react-bootstrap";
+import { Tabs, Tab, Card, Table, Spinner, Container, Button, Badge, ButtonGroup, Dropdown } from "react-bootstrap";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useLoadsService, type Load } from "../api/loads";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
@@ -10,9 +11,14 @@ import CreateLoadModal from "../components/Cargas/CreateLoadModal";
 import toast from "react-hot-toast";
 
 const Cargas: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { fetchLoads, acceptLoad, rejectLoad } = useLoadsService();
   const currentUser = useSelector((s: RootState) => s.auth.user);
   const currentUserRole = useSelector((s: RootState) => s.auth.user?.roles?.[0]?.name);
+  
+  // Determinar el prefijo de ruta (admin o maestro)
+  const routePrefix = location.pathname.startsWith("/admin") ? "/admin" : "/maestro";
   
   // Validaciones basadas en tipo de empresa
   const userCanCreateLoads = canCreateLoads(currentUser);

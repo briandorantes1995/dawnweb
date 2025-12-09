@@ -3,6 +3,7 @@ import Dashboard from "./views/Dashboard";
 import UserProfile from "./views/UserProfile";
 import Users from "./views/Users";
 import Cargas from "./views/Cargas";
+import BulkCargas from "./views/BulkCargas";
 import Maps from "./views/Maps";
 import Units from "./views/Units";
 import Trailers from "./views/Trailers";
@@ -60,6 +61,13 @@ const adminRoutes: DashboardRoute[] = [
     name: "Cargas",
     icon: "nc-icon nc-delivery-fast",
     component: Cargas,
+    layout: "/admin"
+  },
+  {
+    path: "/cargas-masivas",
+    name: "Cargas Masivas",
+    icon: "nc-icon nc-delivery-fast",
+    component: BulkCargas,
     layout: "/admin"
   },
   {

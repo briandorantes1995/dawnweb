@@ -42,7 +42,12 @@ export async function buildLoadPayload(
         : formData.tipoCargaTransporte === "congelado"
         ? "Congelado"
         : "Combinado";
-    descripcion = `${descripcion} (Carga: ${tipoCargaText})`;
+    
+    if (formData.tipoCargaTransporte === "combinado") {
+      descripcion = `${descripcion} (Carga: ${tipoCargaText}, se necesita mampara)`;
+    } else {
+      descripcion = `${descripcion} (Carga: ${tipoCargaText})`;
+    }
   }
 
   const payload: LoadPayload = {

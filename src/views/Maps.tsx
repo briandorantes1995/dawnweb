@@ -8,7 +8,9 @@ import { RootState } from "../store/store";
 import io, { Socket } from "socket.io-client";
 import { useAssignmentService, Assignment } from "../api/assignments";
 import { useDriversService } from "../api/drivers";
+import { useUnitsService } from "../api/unit";
 import { Driver } from "../types/Driver";
+import { getCompanyType, isSellerCompany } from "../utils/companyPermissions";
 import toast from "react-hot-toast";
 import "leaflet/dist/leaflet.css";
 
@@ -44,7 +46,8 @@ const Maps: React.FC = () => {
 
   const { fetchAssignments } = useAssignmentService();
   const { fetchDrivers } = useDriversService();
-  const { accessToken, user } = useSelector((state: RootState) => state.auth);
+  const { fetchUnits } = useUnitsService();
+  const { accessToken, user, loading: authLoading } = useSelector((state: RootState) => state.auth);
 
   const [trackingType, setTrackingType] = useState<TrackingType>("driver");
   const [loading, setLoading] = useState(false);
@@ -56,9 +59,47 @@ const Maps: React.FC = () => {
   );
   const [mapCenter, setMapCenter] =
       useState<[number, number]>(fallbackCenter);
+  const [hasDriversOrUnits, setHasDriversOrUnits] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const selectedIdRef = useRef<string>("");
+  const hasCheckedRef = useRef(false);
+
+  // Verificar si la empresa tiene drivers o unidades (solo una vez)
+  useEffect(() => {
+    if (hasCheckedRef.current || !user?.company_id || authLoading) return;
+
+    const checkDriversAndUnits = async () => {
+      hasCheckedRef.current = true;
+      
+      try {
+        const [driversRes, unitsRes] = await Promise.all([
+          fetchDrivers().catch(() => ({ active: [], inactive: [] })),
+          fetchUnits().catch(() => ({ active: [], inactive: [] }))
+        ]);
+
+        const hasDrivers = (driversRes?.active?.length || 0) > 0;
+        const hasUnits = (unitsRes?.active?.length || 0) > 0;
+        const hasAny = hasDrivers || hasUnits;
+        setHasDriversOrUnits(hasAny);
+        
+        // Si no tiene drivers/unidades y está en modo driver, cambiar a assignment
+        if (!hasAny && trackingType === "driver") {
+          setTrackingType("assignment");
+        }
+      } catch (error) {
+        console.error("Error verificando drivers/unidades:", error);
+        setHasDriversOrUnits(false);
+        // Si hay error y está en modo driver, cambiar a assignment
+        if (trackingType === "driver") {
+          setTrackingType("assignment");
+        }
+      }
+    };
+
+    checkDriversAndUnits();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.company_id, authLoading]);
 
   /* -------------------------------------------------
      EXTRAER LAST LOCATION
@@ -86,21 +127,50 @@ const Maps: React.FC = () => {
      CARGAR DRIVERS O ASSIGNMENTS
 -------------------------------------------------- */
   useEffect(() => {
+    // Validar usuario antes de cargar
+    if (authLoading || !user?.company_id) {
+      return;
+    }
+
+    // Si no tiene drivers/unidades y está en modo driver, no cargar
+    if (trackingType === "driver" && !hasDriversOrUnits) {
+      setDrivers([]);
+      setAssignments([]);
+      setLoading(false);
+      return;
+    }
+
     const load = async () => {
       setLoading(true);
       setSelectedId(""); // mostrar todos
 
       try {
-        if (trackingType === "driver") {
+        if (trackingType === "driver" && hasDriversOrUnits) {
           const res = await fetchDrivers();
           setDrivers(res.active ?? []);
           setAssignments([]);
         } else {
           const res = await fetchAssignments();
-          const actives = [
-            ...(res.pendiente ?? []),
-            ...(res.problema_reportado ?? [])
-          ];
+          
+          // Si es SELLER, solo mostrar asignaciones abiertas (pendiente y problema_reportado)
+          // Si es TRANSPORTER/PROVIDER, mostrar todas las asignaciones activas
+          const companyType = getCompanyType(user);
+          let actives: Assignment[] = [];
+          
+          if (companyType === "SELLER") {
+            // Solo asignaciones abiertas para SELLER
+            actives = [
+              ...(res.pendiente ?? []),
+              ...(res.problema_reportado ?? [])
+            ];
+          } else {
+            // Para TRANSPORTER/PROVIDER, mostrar todas las activas
+            actives = [
+              ...(res.pendiente ?? []),
+              ...(res.problema_reportado ?? [])
+            ];
+          }
+          
           setAssignments(actives);
           setDrivers([]);
         }
@@ -114,7 +184,8 @@ const Maps: React.FC = () => {
     };
 
     load();
-  }, [trackingType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackingType, user?.company_id, authLoading, hasDriversOrUnits]);
 
   /* -------------------------------------------------
      CARGAR UBICACIÓN INICIAL DESDE BD AL SELECCIONAR
@@ -144,7 +215,7 @@ const Maps: React.FC = () => {
      SOCKET: CONEXIÓN (TS SAFE CLEANUP)
 -------------------------------------------------- */
   useEffect(() => {
-    if (!accessToken || !user?.company_id) return;
+    if (!accessToken || !user?.company_id || authLoading) return;
 
     const socket = io(import.meta.env.VITE_API_URL, {
       transports: ["websocket"],
@@ -154,7 +225,7 @@ const Maps: React.FC = () => {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      if (trackingType === "driver") {
+      if (trackingType === "driver" && hasDriversOrUnits) {
         socket.emit("join", {
           panel: "drivers",
           companyId: user.company_id
@@ -165,7 +236,7 @@ const Maps: React.FC = () => {
     return () => {
       socket.disconnect();
     };
-  }, [accessToken, user?.company_id]);
+  }, [accessToken, user?.company_id, authLoading, trackingType, hasDriversOrUnits]);
 
   /* -------------------------------------------------
      SOCKET: DRIVERS UPDATE
@@ -221,6 +292,32 @@ const Maps: React.FC = () => {
   /* -------------------------------------------------
      RENDER
 -------------------------------------------------- */
+  // Validar usuario antes de renderizar
+  if (authLoading) {
+    return (
+      <Container fluid>
+        <Card className="mb-3">
+          <Card.Body className="text-center">
+            <Spinner animation="border" />
+            <p className="mt-2">Cargando información del usuario...</p>
+          </Card.Body>
+        </Card>
+      </Container>
+    );
+  }
+
+  if (!user?.company_id) {
+    return (
+      <Container fluid>
+        <Card className="mb-3">
+          <Card.Body className="text-center">
+            <p>No se pudo obtener la información del usuario. Por favor, inicia sesión nuevamente.</p>
+          </Card.Body>
+        </Card>
+      </Container>
+    );
+  }
+
   return (
       <Container fluid>
         <Card className="mb-3">
@@ -233,12 +330,14 @@ const Maps: React.FC = () => {
             <div className="mb-3">
               <Form.Label>Tipo de Seguimiento</Form.Label>
               <ButtonGroup className="w-100">
-                <Button
-                    variant={trackingType === "driver" ? "primary" : "outline-primary"}
-                    onClick={() => setTrackingType("driver")}
-                >
-                  Drivers
-                </Button>
+                {hasDriversOrUnits && (
+                  <Button
+                      variant={trackingType === "driver" ? "primary" : "outline-primary"}
+                      onClick={() => setTrackingType("driver")}
+                  >
+                    Drivers
+                  </Button>
+                )}
                 <Button
                     variant={trackingType === "assignment" ? "primary" : "outline-primary"}
                     onClick={() => setTrackingType("assignment")}

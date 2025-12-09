@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store/store";
 import { logoutThunk } from "../../store/auththunks";
 import { markAllRead } from "../../store/slices/notificationsSlice";
+import { canCreateLoads } from "../../utils/companyPermissions";
 
 import adminRoutes from "../../adminRoutes";
 import maestroRoutes from "../../maestroRoutes";
@@ -19,8 +20,12 @@ function Header() {
 
   const user = useSelector((state: RootState) => state.auth.user);
   const notifications = useSelector((state: RootState) => state.notifications.items);
+  const userRole = useSelector((state: RootState) => state.auth.user?.roles?.[0]?.name);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const userCanCreateLoads = canCreateLoads(user);
+  const hasRolePermission = userRole === "Admin" || userRole === "Maestro";
+  const showCargasMenu = userCanCreateLoads && hasRolePermission;
 
   const handleLogout = async () => {
     await dispatch(logoutThunk());
@@ -95,6 +100,40 @@ function Header() {
 
             {/* RIGHT SIDE */}
             <Nav className="ml-auto" navbar>
+              {/* CARGAS DROPDOWN */}
+              {showCargasMenu && (
+                <Dropdown as={Nav.Item}>
+                  <Dropdown.Toggle
+                      as={Nav.Link}
+                      className="m-0"
+                      id="navbar-cargas"
+                  >
+                    <i className="nc-icon nc-delivery-fast"></i>
+                    <span className="no-icon">Cargas</span>
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu className="dropdown-menu-end">
+                    <Dropdown.Item
+                        onClick={() =>
+                            navigate(
+                                location.pathname.startsWith("/admin")
+                                    ? "/admin/cargas"
+                                    : "/maestro/cargas"
+                            )}>
+                      <i className="nc-icon nc-delivery-fast"></i> Cargas
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                        onClick={() =>
+                            navigate(
+                                location.pathname.startsWith("/admin")
+                                    ? "/admin/cargas-masivas"
+                                    : "/maestro/cargas-masivas"
+                            )}>
+                      <i className="nc-icon nc-layers"></i> Cargas Masivas
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+              )}
+
               {/* USER */}
               <Nav.Item>
                 <Nav.Link className="m-0">

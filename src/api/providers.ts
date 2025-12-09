@@ -5,6 +5,8 @@ export type Provider = {
   id: string;
   name: string;
   legal_name?: string | null;
+  agreement_id?: string;
+  agreement_status?: "pending" | "active";
 };
 
 export type ProvidersResponse = {
@@ -14,14 +16,19 @@ export type ProvidersResponse = {
 };
 
 export function useProvidersService() {
-  const { get } = useApi();
+  const { get, post } = useApi();
 
   const fetchProviders = async (): Promise<ProvidersResponse> => {
     return await get<ProvidersResponse>("/providers/agreements");
   };
 
+  const acceptAgreement = async (agreementId: string): Promise<any> => {
+    return await post<any>(`/providers/agreements/${agreementId}/accept`, {});
+  };
+
   return {
     fetchProviders,
+    acceptAgreement,
   };
 }
 

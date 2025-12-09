@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Modal,
   Button,
@@ -44,9 +44,10 @@ interface Props {
 const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
   const { createLoad } = useLoadsService();
   const { fetchBranches } = useBranchesService();
-  const { fetchProviders } = useProvidersService();
+  const { fetchProviders, acceptAgreement } = useProvidersService();
   const { fetchUnits } = useUnitsService();
   const currentUser = useSelector((s: RootState) => s.auth.user);
+  const authLoading = useSelector((s: RootState) => s.auth.loading);
 
   const [formData, setFormData] = useState<FormData>({
     folio: "",
@@ -92,9 +93,15 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
   const [showTipoVehiculoModal, setShowTipoVehiculoModal] = useState(false);
 
   const [saving, setSaving] = useState(false);
+  const loadingRef = useRef(false);
+  const loadingBranchesRef = useRef(false);
+  const loadingTransportistasRef = useRef(false);
+  const loadingUnidadesRef = useRef(false);
+  const hasLoadedRef = useRef(false);
 
   const loadBranches = useCallback(async () => {
-    if (!currentUser?.company_id) return;
+    if (!currentUser?.company_id || loadingBranchesRef.current) return;
+    loadingBranchesRef.current = true;
     setLoadingBranches(true);
     try {
       const response = await fetchBranches();
@@ -119,11 +126,13 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
       }
     } finally {
       setLoadingBranches(false);
+      loadingBranchesRef.current = false;
     }
   }, [fetchBranches, currentUser?.company_id]);
 
   const loadTransportistas = useCallback(async () => {
-    if (!currentUser?.company_id) return;
+    if (!currentUser?.company_id || loadingTransportistasRef.current) return;
+    loadingTransportistasRef.current = true;
     setLoadingTransportistas(true);
     try {
       const response = await fetchProviders();
@@ -133,80 +142,80 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
       if (!response) {
         console.warn("Response es null o undefined");
         setTransportistas([]);
-        return;
-      }
+      } else {
+        // Combinar acuerdos activos y pendientes
+        const activeProviders = response?.active || [];
+        const pendingProviders = response?.pending || [];
+        
+        console.log("Active providers:", activeProviders);
+        console.log("Pending providers:", pendingProviders);
+        
+        // Combinar todos los acuerdos (activos y pendientes)
+        const allAgreements = [...activeProviders, ...pendingProviders];
+        
+        console.log("Total acuerdos:", allAgreements.length);
+        console.log("Detalles de acuerdos:", allAgreements);
+        
+        if (allAgreements.length === 0) {
+          console.warn("No hay acuerdos disponibles");
+          setTransportistas([]);
+        } else {
+          // Filtrar proveedores: necesitamos acuerdos donde la compañía relacionada es PROVIDER
+          // Esto significa que mi compañía es SELLER y la otra es TRANSPORTER (PROVIDER)
+          const providers: Provider[] = allAgreements
+            .filter((p: any) => {
+              if (!p) {
+                console.log("Agreement es null/undefined");
+                return false;
+              }
+              
+              const isProvider = p.related_company_role === "PROVIDER";
+              const hasId = !!p.related_company_id;
+              const hasName = !!p.related_company_name;
+              
+              console.log("Evaluando agreement:", {
+                agreement_id: p.agreement_id,
+                my_role: p.my_role,
+                related_company_role: p.related_company_role,
+                related_company_id: p.related_company_id,
+                related_company_name: p.related_company_name,
+                status: p.status,
+                isProvider,
+                hasId,
+                hasName,
+                passes: isProvider && hasId && hasName,
+              });
+              
+              return isProvider && hasId && hasName;
+            })
+            .map((p: any) => {
+              console.log("Mapeando provider:", p.related_company_name);
+              return {
+                id: p.related_company_id,
+                name: p.related_company_name,
+                legal_name: p.related_company_name,
+                agreement_id: p.agreement_id,
+                agreement_status: p.status || "active",
+              };
+            });
 
-      // Combinar acuerdos activos
-      const activeProviders = response?.active || [];
-      const pendingProviders = response?.pending || [];
-      
-      console.log("Active providers:", activeProviders);
-      console.log("Pending providers:", pendingProviders);
-      
-      // Los acuerdos activos son los que tienen status "active" o undefined
-      const allActiveAgreements = [...activeProviders];
-      
-      console.log("Total acuerdos activos:", allActiveAgreements.length);
-      console.log("Detalles de acuerdos activos:", allActiveAgreements);
-      
-      if (allActiveAgreements.length === 0) {
-        console.warn("No hay acuerdos activos disponibles");
-        setTransportistas([]);
-        return;
-      }
-
-      // Filtrar proveedores: necesitamos acuerdos donde la compañía relacionada es PROVIDER
-      // Esto significa que mi compañía es SELLER y la otra es TRANSPORTER (PROVIDER)
-      const providers: Provider[] = allActiveAgreements
-        .filter((p: any) => {
-          if (!p) {
-            console.log("Agreement es null/undefined");
-            return false;
+          console.log("Transportistas finales cargados:", providers.length);
+          console.log("Transportistas:", providers);
+          
+          if (providers.length === 0 && allAgreements.length > 0) {
+            console.warn("Hay acuerdos pero ninguno es PROVIDER. Detalles:", 
+              allAgreements.map((a: any) => ({
+                my_role: a.my_role,
+                related_company_role: a.related_company_role,
+                name: a.related_company_name,
+                status: a.status,
+              }))
+            );
           }
           
-          const isProvider = p.related_company_role === "PROVIDER";
-          const hasId = !!p.related_company_id;
-          const hasName = !!p.related_company_name;
-          
-          console.log("Evaluando agreement:", {
-            agreement_id: p.agreement_id,
-            my_role: p.my_role,
-            related_company_role: p.related_company_role,
-            related_company_id: p.related_company_id,
-            related_company_name: p.related_company_name,
-            status: p.status,
-            isProvider,
-            hasId,
-            hasName,
-            passes: isProvider && hasId && hasName,
-          });
-          
-          return isProvider && hasId && hasName;
-        })
-        .map((p: any) => {
-          console.log("Mapeando provider:", p.related_company_name);
-          return {
-            id: p.related_company_id,
-            name: p.related_company_name,
-            legal_name: p.related_company_name,
-          };
-        });
-
-      console.log("Transportistas finales cargados:", providers.length);
-      console.log("Transportistas:", providers);
-      
-      if (providers.length === 0 && allActiveAgreements.length > 0) {
-        console.warn("Hay acuerdos pero ninguno es PROVIDER. Detalles:", 
-          allActiveAgreements.map((a: any) => ({
-            my_role: a.my_role,
-            related_company_role: a.related_company_role,
-            name: a.related_company_name,
-            status: a.status,
-          }))
-        );
+          setTransportistas(providers);
+        }
       }
-      
-      setTransportistas(providers);
     } catch (err: any) {
       console.error("Error al cargar transportistas:", err);
       console.error("Error completo:", JSON.stringify(err, null, 2));
@@ -214,11 +223,13 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
       setTransportistas([]);
     } finally {
       setLoadingTransportistas(false);
+      loadingTransportistasRef.current = false;
     }
   }, [fetchProviders, currentUser?.company_id]);
 
   const loadUnidadesPropias = useCallback(async () => {
-    if (!currentUser?.company_id) return;
+    if (!currentUser?.company_id || loadingUnidadesRef.current) return;
+    loadingUnidadesRef.current = true;
     setLoadingUnidades(true);
     try {
       const response = await fetchUnits();
@@ -231,18 +242,28 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
       setTieneUnidadesPropias(false);
     } finally {
       setLoadingUnidades(false);
+      loadingUnidadesRef.current = false;
     }
   }, [fetchUnits, currentUser?.company_id]);
 
-  const loadAll = useCallback(async () => {
-    await Promise.all([loadBranches(), loadTransportistas(), loadUnidadesPropias()]);
-  }, [loadBranches, loadTransportistas, loadUnidadesPropias]);
-
   useEffect(() => {
-    if (show) {
-      loadAll();
-    } else {
-      // Reset form when modal closes
+    // Solo ejecutar si el modal está abierto, auth no está cargando, hay usuario con company_id, y no está cargando
+    if (show && !authLoading && currentUser?.company_id && !loadingRef.current && !hasLoadedRef.current) {
+      loadingRef.current = true;
+      hasLoadedRef.current = true;
+      
+      // Llamar directamente a las funciones en lugar de usar loadAll para evitar dependencias
+      Promise.all([
+        loadBranches(),
+        loadTransportistas(),
+        loadUnidadesPropias()
+      ]).finally(() => {
+        loadingRef.current = false;
+      });
+    } else if (!show) {
+      // Reset cuando el modal se cierra
+      loadingRef.current = false;
+      hasLoadedRef.current = false;
       setFormData({
         folio: "",
         empresaTransportista: "",
@@ -271,7 +292,8 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
       setSelectedTransportista(null);
       setSelectedUnidad(null);
     }
-  }, [show, loadAll]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show, authLoading, currentUser?.company_id]);
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -311,7 +333,21 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
     setShowDestinationModal(false);
   };
 
-  const handleTransportistaSelect = (transportista: Provider) => {
+  const handleTransportistaSelect = async (transportista: Provider) => {
+    // Si el acuerdo está pendiente, aceptarlo automáticamente
+    if (transportista.agreement_status === "pending" && transportista.agreement_id) {
+      try {
+        await acceptAgreement(transportista.agreement_id);
+        toast.success(`Acuerdo con ${transportista.name} aceptado exitosamente`);
+        // Recargar la lista de transportistas para actualizar el estado
+        await loadTransportistas();
+      } catch (err: any) {
+        console.error("Error al aceptar acuerdo:", err);
+        toast.error(err?.message || "Error al aceptar el acuerdo");
+        return; // No continuar si falla la aceptación
+      }
+    }
+    
     setSelectedTransportista(transportista);
     setFormData((prev) => ({ ...prev, empresaTransportista: transportista.name }));
     setShowTransportistaModal(false);
@@ -641,6 +677,7 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                         : formData.tipoCargaTransporte === "congelado"
                         ? "Congelado"
                         : "Combinado"}
+                      {formData.tipoCargaTransporte === "combinado" && ", se necesita mampara"}
                       )
                     </Form.Text>
                   )}
@@ -911,7 +948,14 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   onClick={() => handleTransportistaSelect(transportista)}
                 >
                   <div>
-                    <strong>{transportista.name}</strong>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <strong>{transportista.name}</strong>
+                      {transportista.agreement_status === "pending" && (
+                        <span className="badge bg-warning text-dark ms-2">
+                          Pendiente
+                        </span>
+                      )}
+                    </div>
                     {transportista.legal_name && (
                       <div className="text-muted small">
                         {transportista.legal_name}
