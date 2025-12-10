@@ -8,17 +8,42 @@ import {
   Spinner,
   Card,
 } from "react-bootstrap";
+import { Formik } from "formik";
 import { useLoadsService } from "../../api/loads";
 import { useBranchesService, type Branch } from "../../api/branches";
 import { useProvidersService, type Provider } from "../../api/providers";
 import { useUnitsService } from "../../api/unit";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
-import { validateLoadForm, type FormData } from "../../utils/loadFormValidation";
+import { LoadSchema } from "../../validation/schema";
 import { buildLoadPayload } from "../../utils/loadFormPayload";
 import { normalizeGoogleMapsLink } from "../../utils/googleMapsUtils";
 import toast from "react-hot-toast";
 import "./CreateLoadModal.css";
+
+type FormData = {
+  folio: string;
+  empresaTransportista: string;
+  tipoTransporte: string;
+  unidadPropia: string;
+  tipoCarga: string;
+  tipoVehiculo: string;
+  tipoCargaTransporte: string;
+  origen: string;
+  destino: string;
+  nombreCliente: string;
+  linkUbicacionCliente: string;
+  descripcion: string;
+  peso: string;
+  volumen: string;
+  fechaCarga: string;
+  horaCarga: string;
+  fechaEntrega: string;
+  horaEntrega: string;
+  contactoOrigen: string;
+  contactoDestino: string;
+  observaciones: string;
+};
 
 const VEHICLE_TYPES = [
   "Moto (Entregas rápidas)",
@@ -49,7 +74,7 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
   const currentUser = useSelector((s: RootState) => s.auth.user);
   const authLoading = useSelector((s: RootState) => s.auth.loading);
 
-  const [formData, setFormData] = useState<FormData>({
+  const initialValues: FormData = {
     folio: "",
     empresaTransportista: "",
     tipoTransporte: "",
@@ -71,7 +96,7 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
     contactoOrigen: "",
     contactoDestino: "",
     observaciones: "",
-  });
+  };
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
@@ -98,6 +123,7 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
   const loadingTransportistasRef = useRef(false);
   const loadingUnidadesRef = useRef(false);
   const hasLoadedRef = useRef(false);
+  const setFieldValueRef = useRef<((field: string, value: any) => void) | null>(null);
 
   const loadBranches = useCallback(async () => {
     if (!currentUser?.company_id || loadingBranchesRef.current) return;
@@ -264,29 +290,6 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
       // Reset cuando el modal se cierra
       loadingRef.current = false;
       hasLoadedRef.current = false;
-      setFormData({
-        folio: "",
-        empresaTransportista: "",
-        tipoTransporte: "",
-        unidadPropia: "",
-        tipoCarga: "",
-        tipoVehiculo: "",
-        tipoCargaTransporte: "",
-        origen: "",
-        destino: "",
-        nombreCliente: "",
-        linkUbicacionCliente: "",
-        descripcion: "",
-        peso: "",
-        volumen: "",
-        fechaCarga: "",
-        horaCarga: "",
-        fechaEntrega: "",
-        horaEntrega: "",
-        contactoOrigen: "",
-        contactoDestino: "",
-        observaciones: "",
-      });
       setSelectedOrigin(null);
       setSelectedDestination(null);
       setSelectedTransportista(null);
@@ -295,45 +298,38 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, authLoading, currentUser?.company_id]);
 
-  const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleTipoTransporteChange = (tipo: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tipoTransporte: tipo,
-      empresaTransportista: "",
-      unidadPropia: "",
-    }));
+  const handleTipoTransporteChange = (tipo: string, setFieldValue: (field: string, value: any) => void) => {
+    setFieldValue("tipoTransporte", tipo);
+    setFieldValue("empresaTransportista", "");
+    setFieldValue("unidadPropia", "");
     setSelectedTransportista(null);
     setSelectedUnidad(null);
   };
 
-  const handleTipoCargaChange = (tipo: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tipoCarga: tipo,
-      destino: "",
-      nombreCliente: "",
-      linkUbicacionCliente: "",
-    }));
+  const handleTipoCargaChange = (tipo: string, setFieldValue: (field: string, value: any) => void) => {
+    setFieldValue("tipoCarga", tipo);
+    setFieldValue("destino", "");
+    setFieldValue("nombreCliente", "");
+    setFieldValue("linkUbicacionCliente", "");
     setSelectedDestination(null);
   };
 
-  const handleOriginSelect = (branch: Branch) => {
+  const handleOriginSelect = (branch: Branch, setFieldValue: (field: string, value: any) => void) => {
     setSelectedOrigin(branch);
-    setFormData((prev) => ({ ...prev, origen: branch.name }));
+    setFieldValue("origen", branch.name);
     setShowOriginModal(false);
   };
 
-  const handleDestinationSelect = (branch: Branch) => {
+  const handleDestinationSelect = (branch: Branch, setFieldValue: (field: string, value: any) => void) => {
     setSelectedDestination(branch);
-    setFormData((prev) => ({ ...prev, destino: branch.name }));
+    setFieldValue("destino", branch.name);
     setShowDestinationModal(false);
   };
 
-  const handleTransportistaSelect = async (transportista: Provider) => {
+  const handleTransportistaSelect = async (
+    transportista: Provider,
+    setFieldValue: (field: string, value: any) => void
+  ) => {
     // Si el acuerdo está pendiente, aceptarlo automáticamente
     if (transportista.agreement_status === "pending" && transportista.agreement_id) {
       try {
@@ -349,20 +345,20 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
     }
     
     setSelectedTransportista(transportista);
-    setFormData((prev) => ({ ...prev, empresaTransportista: transportista.name }));
+    setFieldValue("empresaTransportista", transportista.name);
     setShowTransportistaModal(false);
   };
 
-  const handleUnidadSelect = (unidad: any) => {
+  const handleUnidadSelect = (unidad: any, setFieldValue: (field: string, value: any) => void) => {
     setSelectedUnidad(unidad);
     const unidadName =
       unidad.plates || unidad.unit_identifier || unidad.box_number || "Unidad";
-    setFormData((prev) => ({ ...prev, unidadPropia: unidadName }));
+    setFieldValue("unidadPropia", unidadName);
     setShowUnidadModal(false);
   };
 
-  const handleTipoVehiculoSelect = (tipo: string) => {
-    setFormData((prev) => ({ ...prev, tipoVehiculo: tipo }));
+  const handleTipoVehiculoSelect = (tipo: string, setFieldValue: (field: string, value: any) => void) => {
+    setFieldValue("tipoVehiculo", tipo);
     setShowTipoVehiculoModal(false);
   };
 
@@ -371,12 +367,12 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
     return branches.filter((branch) => branch.id !== selectedOrigin.id);
   };
 
-  const handleLinkBlur = async () => {
-    if (!formData.linkUbicacionCliente) return;
+  const handleLinkBlur = async (link: string, setFieldValue: (field: string, value: any) => void) => {
+    if (!link) return;
     try {
-      const normalizedLink = await normalizeGoogleMapsLink(formData.linkUbicacionCliente);
-      if (normalizedLink && normalizedLink !== formData.linkUbicacionCliente) {
-        setFormData((prev) => ({ ...prev, linkUbicacionCliente: normalizedLink }));
+      const normalizedLink = await normalizeGoogleMapsLink(link);
+      if (normalizedLink && normalizedLink !== link) {
+        setFieldValue("linkUbicacionCliente", normalizedLink);
       }
     } catch (error) {
       console.error("Error normalizando link:", error);
@@ -396,35 +392,6 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
     return `${hours}:${minutes}`;
   };
 
-  const handleGuardar = async () => {
-    if (!currentUser?.company_id) {
-      toast.error("No se pudo obtener el ID de la empresa");
-      return;
-    }
-
-    if (!validateLoadForm(formData, tieneUnidadesPropias)) {
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      const loadData = await buildLoadPayload(
-        formData,
-        selectedTransportista?.id,
-        tieneUnidadesPropias
-      );
-
-      await createLoad(loadData);
-      toast.success("Carga registrada exitosamente");
-      onSuccess();
-      onHide();
-    } catch (err: any) {
-      toast.error(err?.message || "Error al guardar la carga");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <>
@@ -449,8 +416,45 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
         <Modal.Header closeButton>
           <Modal.Title>Nueva Carga</Modal.Title>
         </Modal.Header>
-        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
-          <Form>
+        <Formik
+          enableReinitialize
+          initialValues={initialValues}
+          validationSchema={LoadSchema(tieneUnidadesPropias)}
+          onSubmit={async (values, { setSubmitting }) => {
+            if (!currentUser?.company_id) {
+              toast.error("No se pudo obtener el ID de la empresa");
+              setSubmitting(false);
+              return;
+            }
+
+            setSaving(true);
+
+            try {
+              const loadData = await buildLoadPayload(
+                values,
+                selectedTransportista?.id,
+                tieneUnidadesPropias
+              );
+
+              await createLoad(loadData);
+              toast.success("Carga registrada exitosamente");
+              onSuccess();
+              onHide();
+            } catch (err: any) {
+              toast.error(err?.message || "Error al guardar la carga");
+            } finally {
+              setSaving(false);
+              setSubmitting(false);
+            }
+          }}
+        >
+          {({ values, errors, touched, handleChange, handleSubmit, setFieldValue, isSubmitting }) => {
+            // Guardar setFieldValue en ref para usarlo en los modales
+            setFieldValueRef.current = setFieldValue;
+            return (
+              <>
+                <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+                  <Form>
             <Card className="mb-3">
               <Card.Header>
                 <strong>Información Básica</strong>
@@ -460,10 +464,15 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   <Form.Label>Folio de carga *</Form.Label>
                   <Form.Control
                     type="text"
-                    value={formData.folio}
-                    onChange={(e) => handleInputChange("folio", e.target.value)}
+                    name="folio"
+                    value={values.folio}
+                    onChange={handleChange}
+                    isInvalid={touched.folio && !!errors.folio}
                     placeholder="Folio de carga"
                   />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.folio as string}
+                  </Form.Control.Feedback>
                 </Form.Group>
 
                 {tieneUnidadesPropias && (
@@ -475,9 +484,9 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                         label="Unidades Propias"
                         name="tipoTransporte"
                         value="unidades_propias"
-                        checked={formData.tipoTransporte === "unidades_propias"}
+                        checked={values.tipoTransporte === "unidades_propias"}
                         onChange={(e) =>
-                          handleTipoTransporteChange(e.target.value)
+                          handleTipoTransporteChange(e.target.value, setFieldValue)
                         }
                       />
                       <Form.Check
@@ -485,43 +494,54 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                         label="Empresa Transport"
                         name="tipoTransporte"
                         value="empresa_transport"
-                        checked={formData.tipoTransporte === "empresa_transport"}
+                        checked={values.tipoTransporte === "empresa_transport"}
                         onChange={(e) =>
-                          handleTipoTransporteChange(e.target.value)
+                          handleTipoTransporteChange(e.target.value, setFieldValue)
                         }
                       />
                     </div>
+                    {touched.tipoTransporte && errors.tipoTransporte && (
+                      <div className="text-danger small mb-3">{errors.tipoTransporte as string}</div>
+                    )}
                   </>
                 )}
 
                 {(!tieneUnidadesPropias ||
-                  formData.tipoTransporte === "empresa_transport") && (
+                  values.tipoTransporte === "empresa_transport") && (
                   <Form.Group className="mb-3">
                     <Form.Label>Empresa Transportista *</Form.Label>
                     <Button
+                      type="button"
                       variant="outline-secondary"
                       onClick={() => setShowTransportistaModal(true)}
-                      className="w-100 text-start"
+                      className={`w-100 text-start ${touched.empresaTransportista && errors.empresaTransportista ? 'border-danger' : ''}`}
                       disabled={loadingTransportistas}
                     >
-                      {formData.empresaTransportista || "Seleccionar transportista"}
+                      {values.empresaTransportista || "Seleccionar transportista"}
                       <i className="fas fa-chevron-down float-end mt-1"></i>
                     </Button>
+                    {touched.empresaTransportista && errors.empresaTransportista && (
+                      <div className="text-danger small mt-1">{errors.empresaTransportista as string}</div>
+                    )}
                   </Form.Group>
                 )}
 
-                {formData.tipoTransporte === "unidades_propias" && (
+                {values.tipoTransporte === "unidades_propias" && (
                   <Form.Group className="mb-3">
                     <Form.Label>Unidad Propia *</Form.Label>
                     <Button
+                      type="button"
                       variant="outline-secondary"
                       onClick={() => setShowUnidadModal(true)}
-                      className="w-100 text-start"
+                      className={`w-100 text-start ${touched.unidadPropia && errors.unidadPropia ? 'border-danger' : ''}`}
                       disabled={loadingUnidades}
                     >
-                      {formData.unidadPropia || "Seleccionar unidad"}
+                      {values.unidadPropia || "Seleccionar unidad"}
                       <i className="fas fa-chevron-down float-end mt-1"></i>
                     </Button>
+                    {touched.unidadPropia && errors.unidadPropia && (
+                      <div className="text-danger small mt-1">{errors.unidadPropia as string}</div>
+                    )}
                   </Form.Group>
                 )}
 
@@ -532,29 +552,36 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                     label="Cliente"
                     name="tipoCarga"
                     value="cliente"
-                    checked={formData.tipoCarga === "cliente"}
-                    onChange={(e) => handleTipoCargaChange(e.target.value)}
+                    checked={values.tipoCarga === "cliente"}
+                    onChange={(e) => handleTipoCargaChange(e.target.value, setFieldValue)}
                   />
                   <Form.Check
                     type="radio"
                     label="Viaje Propio"
                     name="tipoCarga"
                     value="viaje_propio"
-                    checked={formData.tipoCarga === "viaje_propio"}
-                    onChange={(e) => handleTipoCargaChange(e.target.value)}
+                    checked={values.tipoCarga === "viaje_propio"}
+                    onChange={(e) => handleTipoCargaChange(e.target.value, setFieldValue)}
                   />
                 </div>
+                {touched.tipoCarga && errors.tipoCarga && (
+                  <div className="text-danger small mb-3">{errors.tipoCarga as string}</div>
+                )}
 
                 <Form.Group className="mb-3">
                   <Form.Label>Tipo de Vehículo *</Form.Label>
                   <Button
+                    type="button"
                     variant="outline-secondary"
                     onClick={() => setShowTipoVehiculoModal(true)}
-                    className="w-100 text-start"
+                    className={`w-100 text-start ${touched.tipoVehiculo && errors.tipoVehiculo ? 'border-danger' : ''}`}
                   >
-                    {formData.tipoVehiculo || "Seleccionar tipo de vehículo"}
+                    {values.tipoVehiculo || "Seleccionar tipo de vehículo"}
                     <i className="fas fa-chevron-down float-end mt-1"></i>
                   </Button>
+                  {touched.tipoVehiculo && errors.tipoVehiculo && (
+                    <div className="text-danger small mt-1">{errors.tipoVehiculo as string}</div>
+                  )}
                 </Form.Group>
 
                 <Form.Label>Tipo de Carga (Seco/Congelado/Combinado) *</Form.Label>
@@ -564,32 +591,29 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                     label="Seco"
                     name="tipoCargaTransporte"
                     value="seco"
-                    checked={formData.tipoCargaTransporte === "seco"}
-                    onChange={(e) =>
-                      handleInputChange("tipoCargaTransporte", e.target.value)
-                    }
+                    checked={values.tipoCargaTransporte === "seco"}
+                    onChange={handleChange}
                   />
                   <Form.Check
                     type="radio"
                     label="Congelado"
                     name="tipoCargaTransporte"
                     value="congelado"
-                    checked={formData.tipoCargaTransporte === "congelado"}
-                    onChange={(e) =>
-                      handleInputChange("tipoCargaTransporte", e.target.value)
-                    }
+                    checked={values.tipoCargaTransporte === "congelado"}
+                    onChange={handleChange}
                   />
                   <Form.Check
                     type="radio"
                     label="Combinado"
                     name="tipoCargaTransporte"
                     value="combinado"
-                    checked={formData.tipoCargaTransporte === "combinado"}
-                    onChange={(e) =>
-                      handleInputChange("tipoCargaTransporte", e.target.value)
-                    }
+                    checked={values.tipoCargaTransporte === "combinado"}
+                    onChange={handleChange}
                   />
                 </div>
+                {touched.tipoCargaTransporte && errors.tipoCargaTransporte && (
+                  <div className="text-danger small mb-3">{errors.tipoCargaTransporte as string}</div>
+                )}
 
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <Form.Label>Origen *</Form.Label>
@@ -607,54 +631,64 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   </Button>
                 </div>
                 <Button
+                  type="button"
                   variant="outline-secondary"
                   onClick={() => setShowOriginModal(true)}
-                  className="w-100 text-start mb-3"
+                  className={`w-100 text-start mb-3 ${touched.origen && errors.origen ? 'border-danger' : ''}`}
                   disabled={loadingBranches}
                 >
-                  {formData.origen || "Seleccionar origen"}
+                  {values.origen || "Seleccionar origen"}
                   <i className="fas fa-chevron-down float-end mt-1"></i>
                 </Button>
+                {touched.origen && errors.origen && (
+                  <div className="text-danger small mb-3">{errors.origen as string}</div>
+                )}
 
-                {formData.tipoCarga === "cliente" && (
+                {values.tipoCarga === "cliente" && (
                   <>
                     <Form.Group className="mb-3">
                       <Form.Label>Destino - Cliente</Form.Label>
                       <Form.Control
                         type="text"
-                        value={formData.nombreCliente}
-                        onChange={(e) =>
-                          handleInputChange("nombreCliente", e.target.value)
-                        }
+                        name="nombreCliente"
+                        value={values.nombreCliente}
+                        onChange={handleChange}
+                        isInvalid={touched.nombreCliente && !!errors.nombreCliente}
                         placeholder="Nombre del cliente *"
                       />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.nombreCliente as string}
+                      </Form.Control.Feedback>
                     </Form.Group>
                     <Form.Group className="mb-3">
                       <Form.Control
                         type="text"
-                        value={formData.linkUbicacionCliente}
-                        onChange={(e) =>
-                          handleInputChange("linkUbicacionCliente", e.target.value)
-                        }
-                        onBlur={handleLinkBlur}
+                        name="linkUbicacionCliente"
+                        value={values.linkUbicacionCliente}
+                        onChange={handleChange}
+                        onBlur={(e) => handleLinkBlur(e.target.value, setFieldValue)}
                         placeholder="Link de ubicación del cliente"
                       />
                     </Form.Group>
                   </>
                 )}
 
-                {formData.tipoCarga === "viaje_propio" && (
+                {values.tipoCarga === "viaje_propio" && (
                   <Form.Group className="mb-3">
                     <Form.Label>Destino *</Form.Label>
                     <Button
+                      type="button"
                       variant="outline-secondary"
                       onClick={() => setShowDestinationModal(true)}
-                      className="w-100 text-start"
+                      className={`w-100 text-start ${touched.destino && errors.destino ? 'border-danger' : ''}`}
                       disabled={loadingBranches || !selectedOrigin}
                     >
-                      {formData.destino || "Seleccionar destino"}
+                      {values.destino || "Seleccionar destino"}
                       <i className="fas fa-chevron-down float-end mt-1"></i>
                     </Button>
+                    {touched.destino && errors.destino && (
+                      <div className="text-danger small mt-1">{errors.destino as string}</div>
+                    )}
                   </Form.Group>
                 )}
 
@@ -663,21 +697,24 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   <Form.Control
                     as="textarea"
                     rows={3}
-                    value={formData.descripcion}
-                    onChange={(e) =>
-                      handleInputChange("descripcion", e.target.value)
-                    }
+                    name="descripcion"
+                    value={values.descripcion}
+                    onChange={handleChange}
+                    isInvalid={touched.descripcion && !!errors.descripcion}
                     placeholder="Descripción de la carga"
                   />
-                  {formData.tipoCargaTransporte && (
+                  <Form.Control.Feedback type="invalid">
+                    {errors.descripcion as string}
+                  </Form.Control.Feedback>
+                  {values.tipoCargaTransporte && (
                     <Form.Text className="text-muted">
                       Se agregará automáticamente: (Carga:{" "}
-                      {formData.tipoCargaTransporte === "seco"
+                      {values.tipoCargaTransporte === "seco"
                         ? "Seco"
-                        : formData.tipoCargaTransporte === "congelado"
+                        : values.tipoCargaTransporte === "congelado"
                         ? "Congelado"
                         : "Combinado"}
-                      {formData.tipoCargaTransporte === "combinado" && ", se necesita mampara"}
+                      {values.tipoCargaTransporte === "combinado" && ", se necesita mampara"}
                       )
                     </Form.Text>
                   )}
@@ -689,8 +726,9 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                       <Form.Label>Peso (opcional)</Form.Label>
                       <Form.Control
                         type="text"
-                        value={formData.peso}
-                        onChange={(e) => handleInputChange("peso", e.target.value)}
+                        name="peso"
+                        value={values.peso}
+                        onChange={handleChange}
                         placeholder="Peso"
                       />
                     </Form.Group>
@@ -700,10 +738,9 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                       <Form.Label>Volumen (opcional)</Form.Label>
                       <Form.Control
                         type="text"
-                        value={formData.volumen}
-                        onChange={(e) =>
-                          handleInputChange("volumen", e.target.value)
-                        }
+                        name="volumen"
+                        value={values.volumen}
+                        onChange={handleChange}
                         placeholder="Volumen"
                       />
                     </Form.Group>
@@ -723,12 +760,15 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                       <Form.Label>Fecha de carga *</Form.Label>
                       <Form.Control
                         type="date"
-                        value={formData.fechaCarga}
-                        onChange={(e) =>
-                          handleInputChange("fechaCarga", e.target.value)
-                        }
+                        name="fechaCarga"
+                        value={values.fechaCarga}
+                        onChange={handleChange}
+                        isInvalid={touched.fechaCarga && !!errors.fechaCarga}
                         min={formatDateForInput(new Date())}
                       />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.fechaCarga as string}
+                      </Form.Control.Feedback>
                     </Form.Group>
                   </Col>
                   <Col>
@@ -736,11 +776,14 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                       <Form.Label>Hora de carga *</Form.Label>
                       <Form.Control
                         type="time"
-                        value={formData.horaCarga}
-                        onChange={(e) =>
-                          handleInputChange("horaCarga", e.target.value)
-                        }
+                        name="horaCarga"
+                        value={values.horaCarga}
+                        onChange={handleChange}
+                        isInvalid={touched.horaCarga && !!errors.horaCarga}
                       />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.horaCarga as string}
+                      </Form.Control.Feedback>
                     </Form.Group>
                   </Col>
                 </Row>
@@ -750,12 +793,15 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                       <Form.Label>Fecha de entrega *</Form.Label>
                       <Form.Control
                         type="date"
-                        value={formData.fechaEntrega}
-                        onChange={(e) =>
-                          handleInputChange("fechaEntrega", e.target.value)
-                        }
+                        name="fechaEntrega"
+                        value={values.fechaEntrega}
+                        onChange={handleChange}
+                        isInvalid={touched.fechaEntrega && !!errors.fechaEntrega}
                         min={formatDateForInput(new Date())}
                       />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.fechaEntrega as string}
+                      </Form.Control.Feedback>
                     </Form.Group>
                   </Col>
                   <Col>
@@ -763,11 +809,14 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                       <Form.Label>Hora de entrega *</Form.Label>
                       <Form.Control
                         type="time"
-                        value={formData.horaEntrega}
-                        onChange={(e) =>
-                          handleInputChange("horaEntrega", e.target.value)
-                        }
+                        name="horaEntrega"
+                        value={values.horaEntrega}
+                        onChange={handleChange}
+                        isInvalid={touched.horaEntrega && !!errors.horaEntrega}
                       />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.horaEntrega as string}
+                      </Form.Control.Feedback>
                     </Form.Group>
                   </Col>
                 </Row>
@@ -783,10 +832,9 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   <Form.Label>Contacto origen</Form.Label>
                   <Form.Control
                     type="text"
-                    value={formData.contactoOrigen}
-                    onChange={(e) =>
-                      handleInputChange("contactoOrigen", e.target.value)
-                    }
+                    name="contactoOrigen"
+                    value={values.contactoOrigen}
+                    onChange={handleChange}
                     placeholder="Contacto origen"
                   />
                 </Form.Group>
@@ -794,10 +842,9 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   <Form.Label>Contacto destino</Form.Label>
                   <Form.Control
                     type="text"
-                    value={formData.contactoDestino}
-                    onChange={(e) =>
-                      handleInputChange("contactoDestino", e.target.value)
-                    }
+                    name="contactoDestino"
+                    value={values.contactoDestino}
+                    onChange={handleChange}
                     placeholder="Contacto destino"
                   />
                 </Form.Group>
@@ -806,32 +853,35 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   <Form.Control
                     as="textarea"
                     rows={3}
-                    value={formData.observaciones}
-                    onChange={(e) =>
-                      handleInputChange("observaciones", e.target.value)
-                    }
+                    name="observaciones"
+                    value={values.observaciones}
+                    onChange={handleChange}
                     placeholder="Observaciones"
                   />
                 </Form.Group>
               </Card.Body>
             </Card>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onHide} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button variant="primary" onClick={handleGuardar} disabled={saving}>
-            {saving ? (
-              <>
-                <Spinner size="sm" className="me-2" />
-                Guardando...
+                </Form>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="secondary" onClick={onHide} disabled={saving || isSubmitting}>
+                  Cancelar
+                </Button>
+                <Button variant="primary" onClick={() => handleSubmit()} disabled={saving || isSubmitting}>
+                  {saving || isSubmitting ? (
+                    <>
+                      <Spinner size="sm" className="me-2" />
+                      Guardando...
+                    </>
+                  ) : (
+                    "Guardar Carga"
+                  )}
+                </Button>
+                </Modal.Footer>
               </>
-            ) : (
-              "Guardar Carga"
-            )}
-          </Button>
-        </Modal.Footer>
+            );
+          }}
+        </Formik>
       </Modal>
 
       {/* Modales de selección */}
@@ -866,7 +916,11 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   key={branch.id}
                   variant="outline-primary"
                   className="w-100 mb-2 text-start"
-                  onClick={() => handleOriginSelect(branch)}
+                  onClick={() => {
+                    if (setFieldValueRef.current) {
+                      handleOriginSelect(branch, setFieldValueRef.current);
+                    }
+                  }}
                 >
                   <div>
                     <strong>{branch.name}</strong>
@@ -899,7 +953,11 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   key={branch.id}
                   variant="outline-primary"
                   className="w-100 mb-2 text-start"
-                  onClick={() => handleDestinationSelect(branch)}
+                  onClick={() => {
+                    if (setFieldValueRef.current) {
+                      handleDestinationSelect(branch, setFieldValueRef.current);
+                    }
+                  }}
                 >
                   <div>
                     <strong>{branch.name}</strong>
@@ -945,7 +1003,11 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   key={transportista.id}
                   variant="outline-primary"
                   className="w-100 mb-2 text-start"
-                  onClick={() => handleTransportistaSelect(transportista)}
+                  onClick={() => {
+                    if (setFieldValueRef.current) {
+                      handleTransportistaSelect(transportista, setFieldValueRef.current);
+                    }
+                  }}
                 >
                   <div>
                     <div className="d-flex justify-content-between align-items-center">
@@ -989,7 +1051,11 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                   key={unidad.id}
                   variant="outline-primary"
                   className="w-100 mb-2 text-start"
-                  onClick={() => handleUnidadSelect(unidad)}
+                  onClick={() => {
+                    if (setFieldValueRef.current) {
+                      handleUnidadSelect(unidad, setFieldValueRef.current);
+                    }
+                  }}
                 >
                   <div>
                     <strong>
@@ -1024,7 +1090,11 @@ const CreateLoadModal: React.FC<Props> = ({ show, onHide, onSuccess }) => {
                 key={tipo}
                 variant="outline-primary"
                 className="w-100 mb-2 text-start"
-                onClick={() => handleTipoVehiculoSelect(tipo)}
+                onClick={() => {
+                  if (setFieldValueRef.current) {
+                    handleTipoVehiculoSelect(tipo, setFieldValueRef.current);
+                  }
+                }}
               >
                 {tipo}
               </Button>

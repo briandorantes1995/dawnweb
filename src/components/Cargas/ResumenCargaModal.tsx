@@ -151,7 +151,7 @@ const ResumenCargaModal: React.FC<Props> = ({ show, onHide, load, onSuccess }) =
 
   const handleEdit = () => {
     // TODO: Implementar modal de edición
-    toast.info("Funcionalidad de edición próximamente");
+    toast("Funcionalidad de edición próximamente", { icon: 'ℹ️' });
   };
 
   if (!load) {

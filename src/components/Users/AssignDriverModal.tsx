@@ -109,9 +109,9 @@ const AssignDriverModal: React.FC<Props> = ({ show, onHide, userId, onSubmit }) 
         setLicenseNumber(existingDriver.license_number || "");
         setLicenseType(existingDriver.license_type || "");
         
-        // Obtener los IDs del vehículo y trailer (pueden venir como objeto o ID)
-        const vehicleId = existingDriver.default_unit_id || existingDriver.default_unit?.id || null;
-        const trailerId = existingDriver.default_trailer_id || existingDriver.default_trailer?.id || null;
+        // Obtener los IDs del vehículo y trailer
+        const vehicleId = existingDriver.default_unit?.id || null;
+        const trailerId = existingDriver.default_trailer?.id || null;
         
         setSelectedVehicleId(vehicleId);
         setSelectedTrailerId(trailerId);

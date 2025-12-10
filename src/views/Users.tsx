@@ -212,7 +212,7 @@ const UsersTabs: React.FC = () => {
               }
 
               // Paso 3: Manejar cambios en el vehículo
-              const currentVehicleId = currentDriver.default_unit_id || currentDriver.default_unit?.id || null;
+              const currentVehicleId = currentDriver.default_unit?.id || null;
               const vehicleChanged = currentVehicleId !== data.vehicleId;
               
               if (vehicleChanged) {
@@ -245,7 +245,7 @@ const UsersTabs: React.FC = () => {
               }
 
               // Paso 4: Manejar cambios en la caja/tráiler
-              const currentTrailerId = currentDriver.default_trailer_id || currentDriver.default_trailer?.id || null;
+              const currentTrailerId = currentDriver.default_trailer?.id || null;
               const trailerChanged = currentTrailerId !== data.trailerId;
               
               if (trailerChanged) {
