@@ -6,6 +6,7 @@ import { RootState, AppDispatch } from "../../store/store";
 import { logoutThunk } from "../../store/auththunks";
 import { markAllRead } from "../../store/slices/notificationsSlice";
 import { canCreateLoads } from "../../utils/companyPermissions";
+import { useStickyRedirect } from '../../hooks/useStickyRedirect';
 
 import adminRoutes from "../../adminRoutes";
 import maestroRoutes from "../../maestroRoutes";
@@ -17,6 +18,7 @@ function Header() {
   const currentRoutes = location.pathname.startsWith("/admin") ? adminRoutes : location.pathname.startsWith("/maestro") ? maestroRoutes : [];
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const navigateToSticky = useStickyRedirect();
 
   const user = useSelector((state: RootState) => state.auth.user);
   const notifications = useSelector((state: RootState) => state.notifications.items);
@@ -227,6 +229,12 @@ function Header() {
                   </Dropdown.Item>
 
                   <div className="divider"></div>
+
+                <Dropdown.Item onClick={() => navigateToSticky('/boards')}>
+                  <i className="nc-icon nc-notes"></i> Sticky Notes
+                </Dropdown.Item>
+
+                <div className="divider"></div>
 
                   <Dropdown.Item onClick={handleLogout}>
                     <i className="nc-icon nc-button-power"></i> Cerrar Sesión
