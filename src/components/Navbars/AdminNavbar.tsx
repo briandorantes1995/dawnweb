@@ -231,7 +231,7 @@ function Header() {
                   <div className="divider"></div>
 
                 <Dropdown.Item onClick={() => navigateToSticky('/boards')}>
-                  <i className="nc-icon nc-notes"></i> Sticky Notes
+                  <i className="nc-icon nc-paper"></i> Sticky Notes
                 </Dropdown.Item>
 
                 <div className="divider"></div>
