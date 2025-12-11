@@ -2,7 +2,7 @@ import React from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 import { Formik } from "formik";
 import { UnitSchema, TrailerSchema } from "../../validation/schema";
-import {stripVehicleFields} from "../../utils/sanitize";
+
 
 interface Props {
   show: boolean;
@@ -33,7 +33,7 @@ const EditVehicleModal: React.FC<Props> = ({
 
       <Formik
         enableReinitialize
-        initialValues={stripVehicleFields(initial)}
+        initialValues={initial}
         validationSchema={validationSchema}
         onSubmit={(values) => {
           const payload = {
@@ -48,7 +48,7 @@ const EditVehicleModal: React.FC<Props> = ({
                 : Number(values.volume),
           };
 
-          onSubmit(stripVehicleFields(payload));
+          onSubmit(payload);
         }}
       >
         {({ values, errors, touched, handleChange, handleSubmit }) => (

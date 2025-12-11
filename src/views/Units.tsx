@@ -4,6 +4,7 @@ import { useUnitsService } from "../api/unit";
 import VehicleActions from "../components/Vehicles/VehicleActions";
 import EditVehicleModal from "../components/Vehicles/EditVehicleModal";
 import AssignDriverModal from "../components/Vehicles/AssignDriverModal";
+import { stripVehicleFields } from "../utils/sanitize";
 import toast from "react-hot-toast";
 
 
@@ -171,7 +172,7 @@ const UnitsTabs: React.FC = () => {
           action="Editar"
           type="unit"
           onSubmit={async (form) => {
-            await editUnit(editingItem.id, form);
+            await editUnit(editingItem.id, stripVehicleFields(form));
             toast.success("Unidad actualizada");
             setShowEdit(false);
             loadUnits();
@@ -188,7 +189,7 @@ const UnitsTabs: React.FC = () => {
           action="Crear"
           type="unit"
           onSubmit={async (form) => {
-            await createUnit(form);
+            await createUnit(stripVehicleFields(form));
             toast.success("Unidad creada");
             setShowCreate(false);
             loadUnits();
