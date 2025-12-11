@@ -1,8 +1,23 @@
-export function stripVehicleFields(vehicle: any) {
+export function stripUnitFields(data: any) {
   const allowed = [
     "type",
     "plates",
     "unit_identifier",
+    "tonnage",
+    "status",
+  ];
+
+  const clean: any = {};
+  for (const key of allowed) {
+    if (data[key] !== undefined) clean[key] = data[key];
+  }
+  return clean;
+}
+
+export function stripTrailerFields(data: any) {
+  const allowed = [
+    "type",
+    "plates",
     "tonnage",
     "status",
     "volume",
@@ -12,7 +27,7 @@ export function stripVehicleFields(vehicle: any) {
 
   const clean: any = {};
   for (const key of allowed) {
-    if (vehicle[key] !== undefined) clean[key] = vehicle[key];
+    if (data[key] !== undefined) clean[key] = data[key];
   }
   return clean;
 }
