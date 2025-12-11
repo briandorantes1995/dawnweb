@@ -48,7 +48,7 @@ const EditVehicleModal: React.FC<Props> = ({
                 : Number(values.volume),
           };
 
-          onSubmit(payload);
+          onSubmit(stripVehicleFields(payload));
         }}
       >
         {({ values, errors, touched, handleChange, handleSubmit }) => (
