@@ -14,11 +14,15 @@ export function useTrailersService() {
 
   // POST — Create trailer
   const createTrailer = async (payload: CreateTrailerPayload) => {
+      console.log("Creating unit with payload:", payload);
+    console.log("Sanitized payload:", stripVehicleFields(payload));
     return await post<CreateResponse<Trailer>>("/trailers/create", stripVehicleFields(payload));
   };
 
   // PUT — Update trailer details
   const editTrailer = async (trailerId: string, payload: UpdateTrailerPayload) => {
+      console.log("Creating unit with payload:", payload);
+    console.log("Sanitized payload:", stripVehicleFields(payload));
     return await put<UpdateResponse<Trailer>>(`/trailers/update/${trailerId}`, stripVehicleFields(payload));
   };
 

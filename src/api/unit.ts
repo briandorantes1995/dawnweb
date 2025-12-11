@@ -15,11 +15,15 @@ export function useUnitsService() {
 
   // POST — Create unit
   const createUnit = async (payload: CreateUnitPayload) => {
+    console.log("Creating unit with payload:", payload);
+    console.log("Sanitized payload:", stripVehicleFields(payload));
     return await post<CreateResponse<TransportUnit>>("/units/create", stripVehicleFields(payload));
   };
 
   // PUT — Update unit details
   const editUnit = async (trailerId: string, payload: UpdateUnitPayload) => {
+     console.log("Creating unit with payload:", payload);
+    console.log("Sanitized payload:", stripVehicleFields(payload));
     return await put<UpdateResponse<TransportUnit>>(`/units/update/${trailerId}`, stripVehicleFields(payload));
   };
 
