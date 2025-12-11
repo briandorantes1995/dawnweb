@@ -1,8 +1,9 @@
 // src/api/trailers.ts
 import { useApi } from "../hooks/useApi";
-
+import { stripVehicleFields } from "../utils/sanitize";
 import {TransportUnit,CreateUnitPayload,UpdateUnitPayload,FetchResponse,CreateResponse,UpdateResponse,UpdateStatusResponse,
 UnitStatus,} from "../types/Vehicle";
+
 
 export function useUnitsService() {
   const { get, patch, del, post, put } = useApi();
@@ -14,12 +15,12 @@ export function useUnitsService() {
 
   // POST — Create unit
   const createUnit = async (payload: CreateUnitPayload) => {
-    return await post<CreateResponse<TransportUnit>>("/units/create", payload);
+    return await post<CreateResponse<TransportUnit>>("/units/create", stripVehicleFields(payload));
   };
 
   // PUT — Update unit details
   const editUnit = async (trailerId: string, payload: UpdateUnitPayload) => {
-    return await put<UpdateResponse<TransportUnit>>(`/units/update/${trailerId}`, payload);
+    return await put<UpdateResponse<TransportUnit>>(`/units/update/${trailerId}`, stripVehicleFields(payload));
   };
 
   // PATCH — Change unit status (active/inactive)

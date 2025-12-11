@@ -1,6 +1,6 @@
 // src/api/trailers.ts
 import { useApi } from "../hooks/useApi";
-
+import { stripVehicleFields } from "../utils/sanitize";
 import {Trailer,CreateTrailerPayload,UpdateTrailerPayload,FetchResponse,CreateResponse,UpdateResponse,UpdateStatusResponse,
 UnitStatus,} from "../types/Vehicle";
 
@@ -14,12 +14,12 @@ export function useTrailersService() {
 
   // POST — Create trailer
   const createTrailer = async (payload: CreateTrailerPayload) => {
-    return await post<CreateResponse<Trailer>>("/trailers/create", payload);
+    return await post<CreateResponse<Trailer>>("/trailers/create", stripVehicleFields(payload));
   };
 
   // PUT — Update trailer details
   const editTrailer = async (trailerId: string, payload: UpdateTrailerPayload) => {
-    return await put<UpdateResponse<Trailer>>(`/trailers/update/${trailerId}`, payload);
+    return await put<UpdateResponse<Trailer>>(`/trailers/update/${trailerId}`, stripVehicleFields(payload));
   };
 
   // PATCH — Change trailer status (active/inactive)

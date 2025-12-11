@@ -5,7 +5,6 @@ import { useTrailersService } from "../api/trailers";
 import VehicleActions from "../components/Vehicles/VehicleActions";
 import EditVehicleModal from "../components/Vehicles/EditVehicleModal";
 import AssignDriverModal from "../components/Vehicles/AssignDriverModal";
-import { stripVehicleFields } from "../utils/sanitize";
 import toast from "react-hot-toast";
 
 const emptyTrailer = {
@@ -177,7 +176,7 @@ const TrailersTabs: React.FC = () => {
           type="trailer"
           initial={editingItem}
           onSubmit={async (form) => {
-            await editTrailer(editingItem.id, stripVehicleFields(form));
+            await editTrailer(editingItem.id, form);
             toast.success("Trailer actualizado");
             setShowEdit(false);
             loadTrailers();
@@ -193,7 +192,7 @@ const TrailersTabs: React.FC = () => {
         type="trailer"
         initial={emptyTrailer}
         onSubmit={async (form) => {
-          await createTrailer(stripVehicleFields(form));
+          await createTrailer(form);
           toast.success("Trailer creado");
           setShowCreate(false);
           loadTrailers();
