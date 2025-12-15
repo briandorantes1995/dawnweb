@@ -139,5 +139,8 @@ export const logoutThunk = createAsyncThunk(
   "auth/logout",
   async (_, { dispatch }) => {
     dispatch(clearSession());
+    // Limpiar datos del dashboard al cerrar sesión
+    const { clearDashboard } = await import("./slices/dashboardSlice");
+    dispatch(clearDashboard());
   }
 );

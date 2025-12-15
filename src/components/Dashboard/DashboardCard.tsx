@@ -10,9 +10,14 @@ const DashboardCard: React.FC<Props> = ({ children, className }) => {
     return (
         <div
             className={
-                "p-4 rounded-3 shadow-lg bg-white bg-opacity-10 backdrop-blur-md border border-white border-opacity-20 " +
+                "p-4 rounded-3 shadow-lg backdrop-blur-md " +
                 (className ?? "")
             }
+            style={{
+                background: "rgba(255,255,255,0.95)",
+                border: "1px solid rgba(0,0,0,0.1)",
+                color: "#000000"
+            }}
         >
             {children}
         </div>

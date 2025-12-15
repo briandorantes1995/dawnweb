@@ -6,9 +6,10 @@ const PanelContainer: React.FC<{ children: React.ReactNode }> = ({ children }) =
         <div
             className="p-4 rounded-4 shadow-lg"
             style={{
-                background: "rgba(255,255,255,0.1)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                backdropFilter: "blur(12px)"
+                background: "rgba(255,255,255,0.95)",
+                border: "1px solid rgba(0,0,0,0.1)",
+                backdropFilter: "blur(12px)",
+                color: "#000000"
             }}
         >
             {children}

@@ -367,13 +367,13 @@ const UsersTabs: React.FC = () => {
                           <p className="text-muted">No hay usuarios activos</p>
                         </div>
                       ) : (
-                        <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                        <Paper sx={{ height: 600, minHeight: 600, width: '100%', mt: 2, display: 'flex', flexDirection: 'column' }}>
                           <DataGrid
                             rows={activeUsersRows}
                             columns={createUserColumns("active")}
                             initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
                             pageSizeOptions={[5, 10, 25, 50]}
-                            sx={{ border: 0 }}
+                            sx={{ border: 0, flex: 1 }}
                             disableRowSelectionOnClick
                           />
                         </Paper>
@@ -386,13 +386,13 @@ const UsersTabs: React.FC = () => {
                           <p className="text-muted">No hay usuarios pendientes</p>
                         </div>
                       ) : (
-                        <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                        <Paper sx={{ height: 600, minHeight: 600, width: '100%', mt: 2, display: 'flex', flexDirection: 'column' }}>
                           <DataGrid
                             rows={pendingUsersRows}
                             columns={createUserColumns("pending")}
                             initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
                             pageSizeOptions={[5, 10, 25, 50]}
-                            sx={{ border: 0 }}
+                            sx={{ border: 0, flex: 1 }}
                             disableRowSelectionOnClick
                           />
                         </Paper>
@@ -405,13 +405,13 @@ const UsersTabs: React.FC = () => {
                           <p className="text-muted">No hay usuarios inactivos</p>
                         </div>
                       ) : (
-                        <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                        <Paper sx={{ height: 600, minHeight: 600, width: '100%', mt: 2, display: 'flex', flexDirection: 'column' }}>
                           <DataGrid
                             rows={inactiveUsersRows}
                             columns={createUserColumns("inactive")}
                             initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
                             pageSizeOptions={[5, 10, 25, 50]}
-                            sx={{ border: 0 }}
+                            sx={{ border: 0, flex: 1 }}
                             disableRowSelectionOnClick
                           />
                         </Paper>
@@ -446,13 +446,13 @@ const UsersTabs: React.FC = () => {
                           <p className="text-muted">No hay conductores activos</p>
                         </div>
                       ) : (
-                        <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                        <Paper sx={{ height: 600, minHeight: 600, width: '100%', mt: 2, display: 'flex', flexDirection: 'column' }}>
                           <DataGrid
                             rows={activeDriversRows}
                             columns={createDriverColumns("active")}
                             initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
                             pageSizeOptions={[5, 10, 25, 50]}
-                            sx={{ border: 0 }}
+                            sx={{ border: 0, flex: 1 }}
                             disableRowSelectionOnClick
                           />
                         </Paper>
@@ -465,13 +465,13 @@ const UsersTabs: React.FC = () => {
                           <p className="text-muted">No hay conductores inactivos</p>
                         </div>
                       ) : (
-                        <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                        <Paper sx={{ height: 600, minHeight: 600, width: '100%', mt: 2, display: 'flex', flexDirection: 'column' }}>
                           <DataGrid
                             rows={inactiveDriversRows}
                             columns={createDriverColumns("inactive")}
                             initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
                             pageSizeOptions={[5, 10, 25, 50]}
-                            sx={{ border: 0 }}
+                            sx={{ border: 0, flex: 1 }}
                             disableRowSelectionOnClick
                           />
                         </Paper>
