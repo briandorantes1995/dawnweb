@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Tabs, Tab, Card, Table, Spinner, Container } from "react-bootstrap";
+import { Tabs, Tab, Card, Table, Spinner, Container, Button, ButtonGroup } from "react-bootstrap";
 import { useUserService } from "../api/users";
 import { useDriversService } from "../api/drivers";
 import { useApi } from "../hooks/useApi";
@@ -9,11 +9,12 @@ import AssignDriverModal from "../components/Users/AssignDriverModal";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
 import toast from "react-hot-toast";
+import { Driver } from "../types/Driver";
 
 
 const UsersTabs: React.FC = () => {
   const { fetchUsers, approveUser, changeRole, setActiveStatus, deleteUser } = useUserService();
-  const { createDriver, fetchDrivers, editDriver } = useDriversService();
+  const { createDriver, fetchDrivers, editDriver, activateDriver, deactivateDriver } = useDriversService();
   const { patch: patchApi, request } = useApi();
   const currentUserRole = useSelector((s: RootState) => s.auth.user?.roles?.[0]?.name);
   const canDelete = currentUserRole === "Maestro";
@@ -23,6 +24,12 @@ const UsersTabs: React.FC = () => {
   const [activeUsers, setActiveList] = useState([]);
   const [inactiveUsers, setInactiveList] = useState([]);
   const [pendingUsers, setPendingList] = useState([]);
+
+  // Drivers states
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
+  const [errorDrivers, setErrorDrivers] = useState<string | null>(null);
+  const [activeDrivers, setActiveDrivers] = useState<Driver[]>([]);
+  const [inactiveDrivers, setInactiveDrivers] = useState<Driver[]>([]);
 
   // Modal states
   const [showChangeRoleModal, setShowChangeRoleModal] = useState(false);
@@ -48,7 +55,35 @@ const UsersTabs: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
+    loadDrivers();
   }, []);
+
+  const loadDrivers = async () => {
+    try {
+      setLoadingDrivers(true);
+      setErrorDrivers(null);
+      const result = await fetchDrivers();
+      console.log("Drivers data:", result);
+      console.log("Active drivers:", result.active);
+      console.log("Inactive drivers:", result.inactive);
+      
+      // Asegurarse de que siempre sean arrays
+      const active = Array.isArray(result.active) ? result.active : [];
+      const inactive = Array.isArray(result.inactive) ? result.inactive : [];
+      
+      setActiveDrivers(active);
+      setInactiveDrivers(inactive);
+      
+      console.log("State updated - Active:", active.length, "Inactive:", inactive.length);
+    } catch (err) {
+      console.error("Error loading drivers:", err);
+      setErrorDrivers("No se pudieron obtener los conductores");
+      setActiveDrivers([]);
+      setInactiveDrivers([]);
+    } finally {
+      setLoadingDrivers(false);
+    }
+  };
 
   const renderTable = (list: any[], tab: "active" | "inactive" | "pending") => (
       <Table striped bordered hover responsive>
@@ -101,10 +136,6 @@ const UsersTabs: React.FC = () => {
                       toast.success("Usuario eliminado");
                       loadUsers();
                     }}
-                    onAssignDriver={canAssignDriver ? () => {
-                      setSelectedUserForDriver(u);
-                      setShowAssignDriverModal(true);
-                    } : undefined}
                 />
               </td>
             </tr>
@@ -113,38 +144,156 @@ const UsersTabs: React.FC = () => {
       </Table>
   );
 
+  const renderDriversTable = (list: Driver[], tab: "active" | "inactive") => {
+    if (!list || list.length === 0) {
+      return (
+        <div className="text-center p-4">
+          <p className="text-muted">No hay conductores {tab === "active" ? "activos" : "inactivos"}</p>
+        </div>
+      );
+    }
+
+    return (
+      <Table striped bordered hover responsive>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Teléfono</th>
+            <th>Número de Licencia</th>
+            <th>Tipo de Licencia</th>
+            <th>Vehículo</th>
+            <th>Caja/Tráiler</th>
+            <th>Estado</th>
+            <th style={{ width: 200 }}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {list.map((driver: Driver) => (
+            <tr key={driver.id}>
+              <td>{driver.member?.first_name} {driver.member?.last_name}</td>
+              <td>{driver.member?.email}</td>
+              <td>{driver.member?.phone}</td>
+              <td>{driver.license_number || "-"}</td>
+              <td>{driver.license_type || "-"}</td>
+              <td>{driver.default_unit?.plates || driver.default_unit?.unit_identifier || "-"}</td>
+              <td>{driver.default_trailer?.plates || driver.default_trailer?.box_number || "-"}</td>
+              <td>{driver.active ? "Activo" : "Inactivo"}</td>
+              <td>
+                <ButtonGroup>
+                  {canAssignDriver && (
+                    <Button
+                      variant="info"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedUserForDriver(driver.member);
+                        setShowAssignDriverModal(true);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                  )}
+                  {tab === "active" && (
+                    <Button
+                      variant="warning"
+                      size="sm"
+                      onClick={async () => {
+                        await deactivateDriver(driver.id);
+                        toast.success("Conductor desactivado");
+                        loadDrivers();
+                      }}
+                    >
+                      Desactivar
+                    </Button>
+                  )}
+                  {tab === "inactive" && (
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={async () => {
+                        await activateDriver(driver.id);
+                        toast.success("Conductor activado");
+                        loadDrivers();
+                      }}
+                    >
+                      Activar
+                    </Button>
+                  )}
+                </ButtonGroup>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    );
+  };
+
   return (
       <Container fluid>
         <Card>
           <Card.Header>
-            <Card.Title as="h4">Usuarios</Card.Title>
+            <Card.Title as="h4">Usuarios y Conductores</Card.Title>
           </Card.Header>
 
           <Card.Body>
-            {loading && (
-                <div className="text-center p-3">
-                  <Spinner animation="border" />
-                  <p className="mt-2">Cargando usuarios...</p>
-                </div>
-            )}
+            <Tabs defaultActiveKey="users" id="main-tabs" className="mb-3">
+              <Tab eventKey="users" title="Usuarios">
+                {loading && (
+                  <div className="text-center p-3">
+                    <Spinner animation="border" />
+                    <p className="mt-2">Cargando usuarios...</p>
+                  </div>
+                )}
 
-            {error && <p className="text-danger text-center">{error}</p>}
+                {error && <p className="text-danger text-center">{error}</p>}
 
-            {!loading && !error && (
-                <Tabs defaultActiveKey="active" id="users-tabs" className="mb-3">
-                  <Tab eventKey="active" title={`Activos (${activeUsers.length})`}>
-                    {renderTable(activeUsers, "active")}
-                  </Tab>
+                {!loading && !error && (
+                  <Tabs defaultActiveKey="active" id="users-tabs" className="mb-3">
+                    <Tab eventKey="active" title={`Activos (${activeUsers.length})`}>
+                      {renderTable(activeUsers, "active")}
+                    </Tab>
 
-                  <Tab eventKey="pending" title={`Pendientes (${pendingUsers.length})`}>
-                    {renderTable(pendingUsers, "pending")}
-                  </Tab>
+                    <Tab eventKey="pending" title={`Pendientes (${pendingUsers.length})`}>
+                      {renderTable(pendingUsers, "pending")}
+                    </Tab>
 
-                  <Tab eventKey="inactive" title={`Inactivos (${inactiveUsers.length})`}>
-                    {renderTable(inactiveUsers, "inactive")}
-                  </Tab>
-                </Tabs>
-            )}
+                    <Tab eventKey="inactive" title={`Inactivos (${inactiveUsers.length})`}>
+                      {renderTable(inactiveUsers, "inactive")}
+                    </Tab>
+                  </Tabs>
+                )}
+              </Tab>
+
+              <Tab eventKey="drivers" title="Drivers">
+                {loadingDrivers && (
+                  <div className="text-center p-3">
+                    <Spinner animation="border" />
+                    <p className="mt-2">Cargando conductores...</p>
+                  </div>
+                )}
+
+                {errorDrivers && (
+                  <div className="text-center p-3">
+                    <p className="text-danger">{errorDrivers}</p>
+                    <Button variant="primary" size="sm" onClick={loadDrivers}>
+                      Reintentar
+                    </Button>
+                  </div>
+                )}
+
+                {!loadingDrivers && !errorDrivers && (
+                  <Tabs defaultActiveKey="active" id="drivers-tabs" className="mb-3">
+                    <Tab eventKey="active" title={`Activos (${activeDrivers.length})`}>
+                      {renderDriversTable(activeDrivers, "active")}
+                    </Tab>
+
+                    <Tab eventKey="inactive" title={`Inactivos (${inactiveDrivers.length})`}>
+                      {renderDriversTable(inactiveDrivers, "inactive")}
+                    </Tab>
+                  </Tabs>
+                )}
+              </Tab>
+            </Tabs>
           </Card.Body>
         </Card>
 
@@ -294,6 +443,7 @@ const UsersTabs: React.FC = () => {
                 ? "Conductor actualizado exitosamente" 
                 : "Usuario asignado como conductor exitosamente");
               loadUsers();
+              loadDrivers();
             } catch (err: any) {
               const errorMessage = err?.message || err?.error || "Error al asignar como conductor";
               if (errorMessage.toLowerCase().includes("already exists") || errorMessage.toLowerCase().includes("ya existe")) {

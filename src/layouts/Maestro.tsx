@@ -19,11 +19,33 @@ const Maestro: React.FC = () => {
 
     useSSENotifications();
 
-    const getRoutes = (routes: DashboardRoute[]) =>
-        routes.map((prop, key) => {
+    const getRoutes = (routes: DashboardRoute[]) => {
+        const routeElements: JSX.Element[] = [];
+        
+        routes.forEach((prop, key) => {
             const Component = prop.component;
-            return <Route key={key} path={prop.path} element={<Component />} />;
+            // Agregar la ruta principal
+            routeElements.push(
+                <Route key={key} path={prop.path} element={<Component />} />
+            );
+            
+            // Si tiene submenú, agregar también esas rutas
+            if (prop.submenu && prop.submenu.length > 0) {
+                prop.submenu.forEach((subRoute, subKey) => {
+                    const SubComponent = subRoute.component;
+                    routeElements.push(
+                        <Route 
+                            key={`${key}-${subKey}`} 
+                            path={subRoute.path} 
+                            element={<SubComponent />} 
+                        />
+                    );
+                });
+            }
         });
+        
+        return routeElements;
+    };
 
     useEffect(() => {
         document.documentElement.scrollTop = 0;

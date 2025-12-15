@@ -45,11 +45,6 @@ const UserActions: React.FC<Props> = ({user,tab, canDelete, onApprove, onActivat
                     <Button variant="info" size="sm" onClick={onChangeRole}>
                         Cambiar rol
                     </Button>
-                    {onAssignDriver && (
-                        <Button variant="secondary" size="sm" onClick={onAssignDriver}>
-                            Conductor
-                        </Button>
-                    )}
                     {deleteButton}
                 </>
             )}
@@ -62,11 +57,6 @@ const UserActions: React.FC<Props> = ({user,tab, canDelete, onApprove, onActivat
                     <Button variant="info" size="sm" onClick={onChangeRole}>
                         Cambiar rol
                     </Button>
-                    {onAssignDriver && (
-                        <Button variant="secondary" size="sm" onClick={onAssignDriver}>
-                            Conductor
-                        </Button>
-                    )}
                     {deleteButton}
                 </>
             )}

@@ -15,6 +15,7 @@ import { useProvidersService, type Provider } from "../api/providers";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
 import { buildLoadPayload } from "../utils/loadFormPayload";
+import { getCompanyType } from "../utils/companyPermissions";
 import toast from "react-hot-toast";
 
 const MAX_ROWS = 10;
@@ -91,6 +92,18 @@ const BulkCargas: React.FC = () => {
   const loadingBranchesRef = useRef(false);
   const loadingTransportistasRef = useRef(false);
   const hasLoadedRef = useRef(false);
+
+  // Verificar si la empresa es TRANSPORTER
+  const companyType = getCompanyType(currentUser);
+  const isTransporter = companyType === "TRANSPORTER";
+
+  // Redirigir si es TRANSPORTER
+  useEffect(() => {
+    if (!authLoading && isTransporter) {
+      toast.error("No tienes permiso para acceder a esta funcionalidad");
+      navigate(`${routePrefix}/cargas`);
+    }
+  }, [authLoading, isTransporter, navigate, routePrefix]);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -415,19 +428,38 @@ const BulkCargas: React.FC = () => {
     "Tráiler (Transporte nacional)",
   ];
 
+  // Si es TRANSPORTER, no mostrar el contenido
+  if (isTransporter) {
+    return (
+      <Container fluid style={{ padding: "20px" }}>
+        <Card className="shadow-sm">
+          <Card.Body>
+            <Alert variant="danger" className="text-center">
+              <i className="fas fa-ban me-2"></i>
+              <strong>Acceso Denegado</strong>
+              <p className="mt-2 mb-0">No tienes permiso para acceder a esta funcionalidad.</p>
+              <Button 
+                variant="primary" 
+                className="mt-3" 
+                onClick={() => navigate(`${routePrefix}/cargas`)}
+              >
+                <i className="fas fa-arrow-left me-2"></i>Volver a Cargas
+              </Button>
+            </Alert>
+          </Card.Body>
+        </Card>
+      </Container>
+    );
+  }
+
   return (
     <Container fluid style={{ padding: "20px" }}>
       <Card className="shadow-sm">
         <Card.Header className="bg-primary text-white">
-          <div className="d-flex justify-content-between align-items-center">
-            <Card.Title as="h4" className="mb-0 text-white">
-              <i className="fas fa-layer-group me-2"></i>
-              Crear Cargas Masivas (Máximo {MAX_ROWS})
-            </Card.Title>
-            <Button variant="light" onClick={() => navigate(`${routePrefix}/cargas`)}>
-              <i className="fas fa-arrow-left me-2"></i>Volver a Cargas
-            </Button>
-          </div>
+          <Card.Title as="h4" className="mb-0 text-white">
+            <i className="fas fa-layer-group me-2"></i>
+            Crear Cargas Masivas (Máximo {MAX_ROWS})
+          </Card.Title>
         </Card.Header>
 
         <Card.Body style={{ padding: "30px" }}>

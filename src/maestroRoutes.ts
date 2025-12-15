@@ -16,6 +16,7 @@ export interface DashboardRoute {
   icon: string;
   component: React.ComponentType<any>;
   layout: string;
+  submenu?: DashboardRoute[];
 }
 
 const maestroRoutes: DashboardRoute[] = [
@@ -59,14 +60,23 @@ const maestroRoutes: DashboardRoute[] = [
         name: "Cargas",
         icon: "nc-icon nc-delivery-fast",
         component: Cargas,
-        layout: "/maestro"
-    },
-    {
-        path: "/cargas-masivas",
-        name: "Cargas Masivas",
-        icon: "nc-icon nc-delivery-fast",
-        component: BulkCargas,
-        layout: "/maestro"
+        layout: "/maestro",
+        submenu: [
+            {
+                path: "/cargas",
+                name: "Cargas",
+                icon: "nc-icon nc-delivery-fast",
+                component: Cargas,
+                layout: "/maestro"
+            },
+            {
+                path: "/cargas-masivas",
+                name: "Cargas Masivas",
+                icon: "nc-icon nc-layers",
+                component: BulkCargas,
+                layout: "/maestro"
+            }
+        ]
     },
     {
         path: "/maps",
