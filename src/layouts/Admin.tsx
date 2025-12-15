@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import AdminNavbar from "../components/Navbars/AdminNavbar";
 import Footer from "../components/Footer/Footer";
@@ -8,15 +8,23 @@ import routes, { DashboardRoute } from "../adminRoutes";
 import { useSSENotifications } from "../hooks/useSSENotifications";
 import { useSelector} from "react-redux";
 import { RootState } from "../store/store";
+import { filterRoutesByCompanyType, getUserCompanyType } from "../utils/routePermissions";
 
 const Admin: React.FC = () => {
     useSSENotifications();
 
     const location = useLocation();
     const mainPanel = useRef<HTMLDivElement | null>(null);
-    const adminRoutes = routes.filter((r) => r.layout === "/admin");
+    const currentUser = useSelector((state: RootState) => state.auth.user);
     const { sidebarColor, sidebarImage, sidebarHasImage } = useSelector(
         (state: RootState) => state.ui);
+
+    // Filtrar rutas por layout y tipo de empresa
+    const adminRoutes = useMemo(() => {
+        const routesByLayout = routes.filter((r) => r.layout === "/admin");
+        const userCompanyType = getUserCompanyType(currentUser);
+        return filterRoutesByCompanyType(routesByLayout, userCompanyType);
+    }, [currentUser]);
 
 
     // Render dinamico de rutas

@@ -10,7 +10,11 @@
   },
   "dependencies": {
     "@changey/react-leaflet-markercluster": "^4.0.0-rc1",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@fortawesome/fontawesome-free": "^7.1.0",
+    "@mui/material": "^7.3.6",
+    "@mui/x-data-grid": "^8.22.0",
     "@reduxjs/toolkit": "^2.11.0",
     "bootstrap": "^5.3.3",
     "formik": "^2.4.9",

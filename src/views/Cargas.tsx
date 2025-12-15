@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Tabs, Tab, Card, Table, Spinner, Container, Button, Badge, ButtonGroup, Dropdown } from "react-bootstrap";
+import React, { useEffect, useState, useMemo } from "react";
+import { Tabs, Tab, Card, Spinner, Container, Button, Badge } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useLoadsService, type Load } from "../api/loads";
 import { useSelector } from "react-redux";
@@ -9,6 +9,9 @@ import AsignarChoferModal from "../components/Cargas/AsignarChoferModal";
 import ResumenCargaModal from "../components/Cargas/ResumenCargaModal";
 import CreateLoadModal from "../components/Cargas/CreateLoadModal";
 import toast from "react-hot-toast";
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import Paper from '@mui/material/Paper';
+import { Box, Chip } from '@mui/material';
 
 const Cargas: React.FC = () => {
   const navigate = useNavigate();
@@ -120,16 +123,13 @@ const Cargas: React.FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pendiente":
-        return <Badge bg="warning">Pendiente</Badge>;
-      case "aceptada":
-        return <Badge bg="success">Aceptada</Badge>;
-      case "cancelada":
-        return <Badge bg="danger">Cancelada</Badge>;
-      default:
-        return <Badge bg="secondary">{status}</Badge>;
-    }
+    const statusMap: Record<string, { label: string; color: "warning" | "success" | "error" | "default" }> = {
+      pendiente: { label: "Pendiente", color: "warning" },
+      aceptada: { label: "Aceptada", color: "success" },
+      cancelada: { label: "Cancelada", color: "error" },
+    };
+    const statusInfo = statusMap[status] || { label: status, color: "default" as const };
+    return <Chip label={statusInfo.label} color={statusInfo.color} size="small" />;
   };
 
   const formatDate = (dateString?: string | null) => {
@@ -149,71 +149,124 @@ const Cargas: React.FC = () => {
     return load.destino || "Sin destino";
   };
 
-  const renderTable = (list: Load[], tab: "pendiente" | "activo") => (
-    <Table striped bordered hover responsive>
-      <thead>
-        <tr>
-          <th>Folio</th>
-          <th>Tipo</th>
-          <th>Origen</th>
-          <th>Destino</th>
-          <th>Fecha Carga</th>
-          <th>Estado</th>
-          <th style={{ width: 300 }}>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {list.map((load) => {
-          const loadId = load.load_id || load.id || "";
-          return (
-          <tr key={loadId}>
-            <td>
-              <strong>#{load.folio}</strong>
-            </td>
-            <td>{load.tipo_carga || "N/A"}</td>
-            <td>{load.origen}</td>
-            <td>{getLoadDestination(load)}</td>
-            <td>{formatDate(load.fecha_carga)}</td>
-            <td>{getStatusBadge(load.status)}</td>
-            <td>
-              <ButtonGroup size="sm">
-                <Button variant="info" onClick={() => handleViewResumen(load)}>
-                  Ver Detalles
-                </Button>
-                {/* Solo empresas TRANSPORTER/PROVIDER pueden aceptar/rechazar cargas pendientes que les fueron asignadas */}
-                {tab === "pendiente" && 
-                 userCanAcceptLoads && 
-                 hasRolePermission && 
-                 load.empresa_transportista_id === currentUser?.company_id && (
-                  <>
-                    <Button variant="success" onClick={() => handleAccept(load)}>
-                      Aceptar
-                    </Button>
-                    <Button variant="danger" onClick={() => handleReject(load)}>
-                      Rechazar
-                    </Button>
-                  </>
-                )}
-                {/* Solo empresas TRANSPORTER/PROVIDER pueden asignar choferes a cargas aceptadas */}
-                {tab === "activo" && 
-                 userCanAcceptLoads && 
-                 hasRolePermission && 
-                 load.empresa_transportista_id === currentUser?.company_id && (
-                  <Button variant="primary" onClick={() => {
-                    setSelectedLoad(load);
-                    setShowAsignarChoferModal(true);
-                  }}>
-                    Asignar Chofer
-                  </Button>
-                )}
-              </ButtonGroup>
-            </td>
-          </tr>
-          );
-        })}
-      </tbody>
-    </Table>
+  // Preparar datos para DataGrid con IDs únicos
+  const pendienteRows = useMemo(() => 
+    pendienteLoads.map((load, index) => ({
+      id: load.load_id || load.id || `pendiente-${index}`,
+      ...load,
+    })), 
+    [pendienteLoads]
   );
+
+  const activoRows = useMemo(() => 
+    activoLoads.map((load, index) => ({
+      id: load.load_id || load.id || `activo-${index}`,
+      ...load,
+    })), 
+    [activoLoads]
+  );
+
+  // Columnas para DataGrid
+  const createColumns = (tab: "pendiente" | "activo"): GridColDef[] => {
+    const baseColumns: GridColDef[] = [
+      { 
+        field: 'folio', 
+        headerName: 'Folio', 
+        width: 120,
+        headerAlign: 'center',
+        align: 'center',
+        renderCell: (params) => <strong>#{params.value}</strong>
+      },
+      { 
+        field: 'tipo_carga', 
+        headerName: 'Tipo', 
+        width: 130,
+        headerAlign: 'center',
+        align: 'center',
+        valueGetter: (value) => value || "N/A"
+      },
+      { 
+        field: 'origen', 
+        headerName: 'Origen', 
+        width: 180,
+        headerAlign: 'center',
+        align: 'center'
+      },
+      { 
+        field: 'destino', 
+        headerName: 'Destino', 
+        width: 200,
+        headerAlign: 'center',
+        align: 'center',
+        valueGetter: (_, row) => getLoadDestination(row as Load)
+      },
+      { 
+        field: 'fecha_carga', 
+        headerName: 'Fecha Carga', 
+        width: 130,
+        headerAlign: 'center',
+        align: 'center',
+        valueGetter: (value) => formatDate(value)
+      },
+      { 
+        field: 'status', 
+        headerName: 'Estado', 
+        width: 130,
+        headerAlign: 'center',
+        align: 'center',
+        renderCell: (params) => getStatusBadge(params.value)
+      },
+    ];
+
+    // Agregar columna de acciones
+    const actionsColumn: GridColDef = {
+      field: 'actions',
+      headerName: 'Acciones',
+      width: 300,
+      headerAlign: 'center',
+      align: 'center',
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => {
+        const load = params.row as Load;
+        return (
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Button variant="info" size="sm" onClick={() => handleViewResumen(load)}>
+              Ver Detalles
+            </Button>
+            {/* Solo empresas TRANSPORTER/PROVIDER pueden aceptar/rechazar cargas pendientes que les fueron asignadas */}
+            {tab === "pendiente" && 
+             userCanAcceptLoads && 
+             hasRolePermission && 
+             load.empresa_transportista_id === currentUser?.company_id && (
+              <>
+                <Button variant="success" size="sm" onClick={() => handleAccept(load)}>
+                  Aceptar
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => handleReject(load)}>
+                  Rechazar
+                </Button>
+              </>
+            )}
+            {/* Solo empresas TRANSPORTER/PROVIDER pueden asignar choferes a cargas aceptadas */}
+            {tab === "activo" && 
+             userCanAcceptLoads && 
+             hasRolePermission && 
+             load.empresa_transportista_id === currentUser?.company_id && (
+              <Button variant="primary" size="sm" onClick={() => {
+                setSelectedLoad(load);
+                setShowAsignarChoferModal(true);
+              }}>
+                Asignar Chofer
+              </Button>
+            )}
+          </Box>
+        );
+      },
+    };
+
+    return [...baseColumns, actionsColumn];
+  };
 
   return (
     <Container fluid>
@@ -275,7 +328,16 @@ const Cargas: React.FC = () => {
                       </p>
                     </div>
                   ) : (
-                    renderTable(pendienteLoads, "pendiente")
+                    <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                      <DataGrid
+                        rows={pendienteRows}
+                        columns={createColumns("pendiente")}
+                        initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+                        pageSizeOptions={[5, 10, 25, 50]}
+                        sx={{ border: 0 }}
+                        disableRowSelectionOnClick
+                      />
+                    </Paper>
                   )}
                 </Tab>
 
@@ -292,7 +354,16 @@ const Cargas: React.FC = () => {
                       </p>
                     </div>
                   ) : (
-                    renderTable(activoLoads, "activo")
+                    <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                      <DataGrid
+                        rows={activoRows}
+                        columns={createColumns("activo")}
+                        initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+                        pageSizeOptions={[5, 10, 25, 50]}
+                        sx={{ border: 0 }}
+                        disableRowSelectionOnClick
+                      />
+                    </Paper>
                   )}
                 </Tab>
               </Tabs>
@@ -330,4 +401,3 @@ const Cargas: React.FC = () => {
 };
 
 export default Cargas;
-

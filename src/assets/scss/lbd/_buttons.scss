@@ -1,9 +1,8 @@
 .btn{
     border-width: $border-thick;
-    background-color: $transparent-bg;
     font-weight: $font-weight-normal;
 
-    @include opacity(.8);
+    @include opacity(1);
     padding: $padding-base-vertical $padding-base-horizontal;
 
     @include btn-styles($default-color, $default-states-color);
@@ -76,6 +75,44 @@
     border: $none;
     font-size: $font-size-medium;
     padding: $padding-base-vertical $padding-base-horizontal;
+    // btn-simple mantiene el estilo outlined
+    background-color: $transparent-bg !important;
+    
+    &.btn-primary {
+        color: $primary-color;
+        &:hover {
+            background-color: rgba($primary-color, 0.1) !important;
+            color: $primary-states-color;
+        }
+    }
+    &.btn-success {
+        color: $success-color;
+        &:hover {
+            background-color: rgba($success-color, 0.1) !important;
+            color: $success-states-color;
+        }
+    }
+    &.btn-info {
+        color: $info-color;
+        &:hover {
+            background-color: rgba($info-color, 0.1) !important;
+            color: $info-states-color;
+        }
+    }
+    &.btn-warning {
+        color: $warning-color;
+        &:hover {
+            background-color: rgba($warning-color, 0.1) !important;
+            color: $warning-states-color;
+        }
+    }
+    &.btn-danger {
+        color: $danger-color;
+        &:hover {
+            background-color: rgba($danger-color, 0.1) !important;
+            color: $danger-states-color;
+        }
+    }
 
     &.btn-icon{
         padding: $padding-base-vertical;

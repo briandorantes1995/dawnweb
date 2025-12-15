@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import AdminNavbar from "../components/Navbars/AdminNavbar";
 import Footer from "../components/Footer/Footer";
@@ -8,16 +8,24 @@ import maestroRoutes, { DashboardRoute } from "../maestroRoutes";
 import { useSSENotifications } from "../hooks/useSSENotifications";
 import { useSelector} from "react-redux";
 import { RootState } from "../store/store";
+import { filterRoutesByCompanyType, getUserCompanyType } from "../utils/routePermissions";
 
 const Maestro: React.FC = () => {
     const location = useLocation();
     const mainPanel = useRef<HTMLDivElement | null>(null);
-    const masterRoutes = maestroRoutes.filter((r) => r.layout === "/maestro");
+    const currentUser = useSelector((state: RootState) => state.auth.user);
     const { sidebarImage, sidebarColor, sidebarHasImage } = useSelector(
         (s: RootState) => s.ui
     );
 
     useSSENotifications();
+
+    // Filtrar rutas por layout y tipo de empresa
+    const masterRoutes = useMemo(() => {
+        const routesByLayout = maestroRoutes.filter((r) => r.layout === "/maestro");
+        const userCompanyType = getUserCompanyType(currentUser);
+        return filterRoutesByCompanyType(routesByLayout, userCompanyType);
+    }, [currentUser]);
 
     const getRoutes = (routes: DashboardRoute[]) => {
         const routeElements: JSX.Element[] = [];

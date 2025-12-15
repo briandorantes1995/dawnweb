@@ -1,15 +1,17 @@
 // Mixin for generating new styles
 @mixin btn-styles($btn-color, $btn-states-color) {
   border-color: $btn-color;
-  color: $btn-color;
+  // Botones sólidos por defecto
+  background-color: $btn-color;
+  color: $white-color;
   
   &:hover,
   &:focus,
   &:active,
   &.active,
   .open > &.dropdown-toggle {
-    background-color: $transparent-bg;
-    color: $btn-states-color;
+    background-color: $btn-states-color;
+    color: $white-color;
     border-color: $btn-states-color;
   }
   
@@ -23,8 +25,10 @@
     &.focus,
     &:active,
     &.active {
-      background-color: $transparent-bg;
-          border-color: $btn-color;
+      background-color: $btn-color;
+      color: $white-color;
+      border-color: $btn-color;
+      opacity: 0.5;
     }
   }
   
@@ -49,7 +53,7 @@
   }
   
   .caret{
-      border-top-color: $btn-color;
+      border-top-color: $white-color;
   }
 }
 

@@ -7,7 +7,10 @@ import BulkCargas from "./views/BulkCargas";
 import Maps from "./views/Maps";
 import Units from "./views/Units";
 import Trailers from "./views/Trailers";
+import { CompanyType } from "./types/company";
 
+// Re-exportar para compatibilidad
+export type { CompanyType };
 
 export interface DashboardRoute {
   upgrade?: boolean;
@@ -18,6 +21,8 @@ export interface DashboardRoute {
   component: React.ComponentType<any>;
   layout: string;
   submenu?: DashboardRoute[];
+  // Tipos de empresa permitidos para esta ruta. Si no se especifica, todos los tipos pueden acceder.
+  allowedCompanyTypes?: CompanyType[];
 }
 
 // Lista tipada
@@ -39,24 +44,26 @@ const adminRoutes: DashboardRoute[] = [
   {
     path: "/usuarios",
     name: "Usuarios",
-    icon: "nc-icon nc-circle-09",
+    icon: "nc-icon nc-single-02",
     component: Users,
     layout: "/admin"
   },
    {
-    path: "/unidades",
-    name: "Unidades/Vehiculos",
-    icon: "nc-icon nc-circle-09",
-    component: Units,
-    layout: "/admin"
-  },
+     path: "/unidades",
+     name: "Unidades/Vehiculos",
+     icon: "nc-icon nc-bus-front-12",
+     component: Units,
+     layout: "/admin",
+     allowedCompanyTypes: ["TRANSPORTER", "BOTH"]
+   },
    {
-    path: "/trailers",
-    name: "Trailers/Cajas",
-    icon: "nc-icon nc-circle-09",
-    component: Trailers,
-    layout: "/admin"
-  },
+     path: "/trailers",
+     name: "Trailers/Cajas",
+     icon: "nc-icon nc-grid-45",
+     component: Trailers,
+     layout: "/admin",
+     allowedCompanyTypes: ["TRANSPORTER", "BOTH"]
+   },
   {
     path: "/cargas",
     name: "Cargas",
@@ -76,7 +83,8 @@ const adminRoutes: DashboardRoute[] = [
         name: "Cargas Masivas",
         icon: "nc-icon nc-layers",
         component: BulkCargas,
-        layout: "/admin"
+        layout: "/admin",
+        allowedCompanyTypes: ["SELLER", "BOTH"]
       }
     ]
   },

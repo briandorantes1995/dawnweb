@@ -6,7 +6,7 @@ const Footer: React.FC = () => {
       <footer className="footer px-0 px-lg-3">
         <Container fluid>
           <nav>
-            <p className="copyright text-center">
+            <p className="copyright text-center" style={{ fontWeight: 'bold' }}>
               © {new Date().getFullYear()}{" "}
               <a>Fehura</a>, made with
               love for better tracking

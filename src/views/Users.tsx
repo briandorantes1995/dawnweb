@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Tabs, Tab, Card, Table, Spinner, Container, Button, ButtonGroup } from "react-bootstrap";
+import React, { useEffect, useState, useMemo } from "react";
+import { Tabs, Tab, Card, Spinner, Container, Button } from "react-bootstrap";
 import { useUserService } from "../api/users";
 import { useDriversService } from "../api/drivers";
 import { useApi } from "../hooks/useApi";
@@ -10,7 +10,9 @@ import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
 import toast from "react-hot-toast";
 import { Driver } from "../types/Driver";
-
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import Paper from '@mui/material/Paper';
+import { Box, Chip } from '@mui/material';
 
 const UsersTabs: React.FC = () => {
   const { fetchUsers, approveUser, changeRole, setActiveStatus, deleteUser } = useUserService();
@@ -21,9 +23,9 @@ const UsersTabs: React.FC = () => {
   const canAssignDriver = currentUserRole === "Admin" || currentUserRole === "Maestro";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeUsers, setActiveList] = useState([]);
-  const [inactiveUsers, setInactiveList] = useState([]);
-  const [pendingUsers, setPendingList] = useState([]);
+  const [activeUsers, setActiveList] = useState<any[]>([]);
+  const [inactiveUsers, setInactiveList] = useState<any[]>([]);
+  const [pendingUsers, setPendingList] = useState<any[]>([]);
 
   // Drivers states
   const [loadingDrivers, setLoadingDrivers] = useState(false);
@@ -85,148 +87,252 @@ const UsersTabs: React.FC = () => {
     }
   };
 
-  const renderTable = (list: any[], tab: "active" | "inactive" | "pending") => (
-      <Table striped bordered hover responsive>
-        <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Email</th>
-          <th>Teléfono</th>
-          <th>Rol</th>
-          <th>Estado</th>
-          <th style={{ width: 250 }}>Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {list.map((u: any) => (
-            <tr key={u.id}>
-              <td>{u.first_name} {u.last_name}</td>
-              <td>{u.email}</td>
-              <td>{u.phone}</td>
-              <td>{u.role_name}</td>
-              <td>
-                {u.pending_approval ? "Pendiente" : u.active ? "Activo" : "Inactivo"}
-              </td>
-              <td>
-                <UserActions
-                    user={u}
-                    tab={tab}
-                    canDelete={canDelete}
-                    onApprove={async () => {
-                      await approveUser(u.id);
-                      toast.success("Usuario aprobado");
-                      loadUsers();
-                    }}
-                    onActivate={async () => {
-                      await setActiveStatus(u.id, true);
-                      toast.success("Usuario activado");
-                      loadUsers();
-                    }}
-                    onDeactivate={async () => {
-                      await setActiveStatus(u.id, false);
-                      toast.success("Usuario desactivado");
-                      loadUsers();
-                    }}
-                    onChangeRole={() => {
-                      setSelectedUserForRole(u);
-                      setShowChangeRoleModal(true);
-                    }}
-                    onDelete={async () => {
-                      await deleteUser(u.id);
-                      toast.success("Usuario eliminado");
-                      loadUsers();
-                    }}
-                />
-              </td>
-            </tr>
-        ))}
-        </tbody>
-      </Table>
+  // Preparar datos para DataGrid de usuarios
+  const activeUsersRows = useMemo(() => 
+    activeUsers.map((u) => ({ id: u.id, ...u })), 
+    [activeUsers]
   );
 
-  const renderDriversTable = (list: Driver[], tab: "active" | "inactive") => {
-    if (!list || list.length === 0) {
-      return (
-        <div className="text-center p-4">
-          <p className="text-muted">No hay conductores {tab === "active" ? "activos" : "inactivos"}</p>
-        </div>
-      );
-    }
+  const inactiveUsersRows = useMemo(() => 
+    inactiveUsers.map((u) => ({ id: u.id, ...u })), 
+    [inactiveUsers]
+  );
 
-    return (
-      <Table striped bordered hover responsive>
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th>Teléfono</th>
-            <th>Número de Licencia</th>
-            <th>Tipo de Licencia</th>
-            <th>Vehículo</th>
-            <th>Caja/Tráiler</th>
-            <th>Estado</th>
-            <th style={{ width: 200 }}>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {list.map((driver: Driver) => (
-            <tr key={driver.id}>
-              <td>{driver.member?.first_name} {driver.member?.last_name}</td>
-              <td>{driver.member?.email}</td>
-              <td>{driver.member?.phone}</td>
-              <td>{driver.license_number || "-"}</td>
-              <td>{driver.license_type || "-"}</td>
-              <td>{driver.default_unit?.plates || driver.default_unit?.unit_identifier || "-"}</td>
-              <td>{driver.default_trailer?.plates || driver.default_trailer?.box_number || "-"}</td>
-              <td>{driver.active ? "Activo" : "Inactivo"}</td>
-              <td>
-                <ButtonGroup>
-                  {canAssignDriver && (
-                    <Button
-                      variant="info"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedUserForDriver(driver.member);
-                        setShowAssignDriverModal(true);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                  )}
-                  {tab === "active" && (
-                    <Button
-                      variant="warning"
-                      size="sm"
-                      onClick={async () => {
-                        await deactivateDriver(driver.id);
-                        toast.success("Conductor desactivado");
-                        loadDrivers();
-                      }}
-                    >
-                      Desactivar
-                    </Button>
-                  )}
-                  {tab === "inactive" && (
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={async () => {
-                        await activateDriver(driver.id);
-                        toast.success("Conductor activado");
-                        loadDrivers();
-                      }}
-                    >
-                      Activar
-                    </Button>
-                  )}
-                </ButtonGroup>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-    );
-  };
+  const pendingUsersRows = useMemo(() => 
+    pendingUsers.map((u) => ({ id: u.id, ...u })), 
+    [pendingUsers]
+  );
+
+  // Preparar datos para DataGrid de conductores
+  const activeDriversRows = useMemo(() => 
+    activeDrivers.map((d) => ({ id: d.id, ...d })), 
+    [activeDrivers]
+  );
+
+  const inactiveDriversRows = useMemo(() => 
+    inactiveDrivers.map((d) => ({ id: d.id, ...d })), 
+    [inactiveDrivers]
+  );
+
+  // Columnas para usuarios
+  const createUserColumns = (tab: "active" | "inactive" | "pending"): GridColDef[] => [
+    { 
+      field: 'first_name', 
+      headerName: 'Nombre', 
+      width: 200,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (_, row) => `${row.first_name || ''} ${row.last_name || ''}`.trim()
+    },
+    { 
+      field: 'email', 
+      headerName: 'Email', 
+      width: 220,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    { 
+      field: 'phone', 
+      headerName: 'Teléfono', 
+      width: 150,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    { 
+      field: 'role_name', 
+      headerName: 'Rol', 
+      width: 150,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    { 
+      field: 'status', 
+      headerName: 'Estado', 
+      width: 130,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (_, row) => {
+        if (row.pending_approval) return "Pendiente";
+        return row.active ? "Activo" : "Inactivo";
+      },
+      renderCell: (params) => {
+        const status = params.value;
+        const color = status === "Activo" ? "success" : status === "Pendiente" ? "warning" : "default";
+        return <Chip label={status} color={color} size="small" />;
+      }
+    },
+    {
+      field: 'actions',
+      headerName: 'Acciones',
+      width: 300,
+      headerAlign: 'center',
+      align: 'center',
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => {
+        const user = params.row;
+        return (
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <UserActions
+              user={user}
+              tab={tab}
+              canDelete={canDelete}
+              onApprove={async () => {
+                await approveUser(user.id);
+                toast.success("Usuario aprobado");
+                loadUsers();
+              }}
+              onActivate={async () => {
+                await setActiveStatus(user.id, true);
+                toast.success("Usuario activado");
+                loadUsers();
+              }}
+              onDeactivate={async () => {
+                await setActiveStatus(user.id, false);
+                toast.success("Usuario desactivado");
+                loadUsers();
+              }}
+              onChangeRole={() => {
+                setSelectedUserForRole(user);
+                setShowChangeRoleModal(true);
+              }}
+              onDelete={async () => {
+                await deleteUser(user.id);
+                toast.success("Usuario eliminado");
+                loadUsers();
+              }}
+            />
+          </Box>
+        );
+      },
+    },
+  ];
+
+  // Columnas para conductores
+  const createDriverColumns = (tab: "active" | "inactive"): GridColDef[] => [
+    { 
+      field: 'member_name', 
+      headerName: 'Nombre', 
+      width: 200,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (_, row) => `${row.member?.first_name || ''} ${row.member?.last_name || ''}`.trim()
+    },
+    { 
+      field: 'member_email', 
+      headerName: 'Email', 
+      width: 220,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (_, row) => row.member?.email || "-"
+    },
+    { 
+      field: 'member_phone', 
+      headerName: 'Teléfono', 
+      width: 150,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (_, row) => row.member?.phone || "-"
+    },
+    { 
+      field: 'license_number', 
+      headerName: 'Número de Licencia', 
+      width: 170,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (value) => value || "-"
+    },
+    { 
+      field: 'license_type', 
+      headerName: 'Tipo de Licencia', 
+      width: 160,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (value) => value || "-"
+    },
+    { 
+      field: 'vehicle', 
+      headerName: 'Vehículo', 
+      width: 150,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (_, row) => row.default_unit?.plates || row.default_unit?.unit_identifier || "-"
+    },
+    { 
+      field: 'trailer', 
+      headerName: 'Caja/Tráiler', 
+      width: 150,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (_, row) => row.default_trailer?.plates || row.default_trailer?.box_number || "-"
+    },
+    { 
+      field: 'status', 
+      headerName: 'Estado', 
+      width: 130,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (_, row) => row.active ? "Activo" : "Inactivo",
+      renderCell: (params) => {
+        const color = params.value === "Activo" ? "success" : "default";
+        return <Chip label={params.value} color={color} size="small" />;
+      }
+    },
+    {
+      field: 'actions',
+      headerName: 'Acciones',
+      width: 200,
+      headerAlign: 'center',
+      align: 'center',
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => {
+        const driver = params.row as Driver;
+        return (
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {canAssignDriver && (
+              <Button
+                variant="info"
+                size="sm"
+                onClick={() => {
+                  setSelectedUserForDriver(driver.member);
+                  setShowAssignDriverModal(true);
+                }}
+              >
+                Editar
+              </Button>
+            )}
+            {tab === "active" && (
+              <Button
+                variant="warning"
+                size="sm"
+                onClick={async () => {
+                  await deactivateDriver(driver.id);
+                  toast.success("Conductor desactivado");
+                  loadDrivers();
+                }}
+              >
+                Desactivar
+              </Button>
+            )}
+            {tab === "inactive" && (
+              <Button
+                variant="success"
+                size="sm"
+                onClick={async () => {
+                  await activateDriver(driver.id);
+                  toast.success("Conductor activado");
+                  loadDrivers();
+                }}
+              >
+                Activar
+              </Button>
+            )}
+          </Box>
+        );
+      },
+    },
+  ];
 
   return (
       <Container fluid>
@@ -250,15 +356,60 @@ const UsersTabs: React.FC = () => {
                 {!loading && !error && (
                   <Tabs defaultActiveKey="active" id="users-tabs" className="mb-3">
                     <Tab eventKey="active" title={`Activos (${activeUsers.length})`}>
-                      {renderTable(activeUsers, "active")}
+                      {activeUsers.length === 0 ? (
+                        <div className="text-center p-5">
+                          <p className="text-muted">No hay usuarios activos</p>
+                        </div>
+                      ) : (
+                        <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                          <DataGrid
+                            rows={activeUsersRows}
+                            columns={createUserColumns("active")}
+                            initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+                            pageSizeOptions={[5, 10, 25, 50]}
+                            sx={{ border: 0 }}
+                            disableRowSelectionOnClick
+                          />
+                        </Paper>
+                      )}
                     </Tab>
 
                     <Tab eventKey="pending" title={`Pendientes (${pendingUsers.length})`}>
-                      {renderTable(pendingUsers, "pending")}
+                      {pendingUsers.length === 0 ? (
+                        <div className="text-center p-5">
+                          <p className="text-muted">No hay usuarios pendientes</p>
+                        </div>
+                      ) : (
+                        <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                          <DataGrid
+                            rows={pendingUsersRows}
+                            columns={createUserColumns("pending")}
+                            initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+                            pageSizeOptions={[5, 10, 25, 50]}
+                            sx={{ border: 0 }}
+                            disableRowSelectionOnClick
+                          />
+                        </Paper>
+                      )}
                     </Tab>
 
                     <Tab eventKey="inactive" title={`Inactivos (${inactiveUsers.length})`}>
-                      {renderTable(inactiveUsers, "inactive")}
+                      {inactiveUsers.length === 0 ? (
+                        <div className="text-center p-5">
+                          <p className="text-muted">No hay usuarios inactivos</p>
+                        </div>
+                      ) : (
+                        <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                          <DataGrid
+                            rows={inactiveUsersRows}
+                            columns={createUserColumns("inactive")}
+                            initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+                            pageSizeOptions={[5, 10, 25, 50]}
+                            sx={{ border: 0 }}
+                            disableRowSelectionOnClick
+                          />
+                        </Paper>
+                      )}
                     </Tab>
                   </Tabs>
                 )}
@@ -284,11 +435,41 @@ const UsersTabs: React.FC = () => {
                 {!loadingDrivers && !errorDrivers && (
                   <Tabs defaultActiveKey="active" id="drivers-tabs" className="mb-3">
                     <Tab eventKey="active" title={`Activos (${activeDrivers.length})`}>
-                      {renderDriversTable(activeDrivers, "active")}
+                      {activeDrivers.length === 0 ? (
+                        <div className="text-center p-5">
+                          <p className="text-muted">No hay conductores activos</p>
+                        </div>
+                      ) : (
+                        <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                          <DataGrid
+                            rows={activeDriversRows}
+                            columns={createDriverColumns("active")}
+                            initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+                            pageSizeOptions={[5, 10, 25, 50]}
+                            sx={{ border: 0 }}
+                            disableRowSelectionOnClick
+                          />
+                        </Paper>
+                      )}
                     </Tab>
 
                     <Tab eventKey="inactive" title={`Inactivos (${inactiveDrivers.length})`}>
-                      {renderDriversTable(inactiveDrivers, "inactive")}
+                      {inactiveDrivers.length === 0 ? (
+                        <div className="text-center p-5">
+                          <p className="text-muted">No hay conductores inactivos</p>
+                        </div>
+                      ) : (
+                        <Paper sx={{ height: 600, width: '100%', mt: 2 }}>
+                          <DataGrid
+                            rows={inactiveDriversRows}
+                            columns={createDriverColumns("inactive")}
+                            initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+                            pageSizeOptions={[5, 10, 25, 50]}
+                            sx={{ border: 0 }}
+                            disableRowSelectionOnClick
+                          />
+                        </Paper>
+                      )}
                     </Tab>
                   </Tabs>
                 )}
@@ -459,5 +640,3 @@ const UsersTabs: React.FC = () => {
 };
 
 export default UsersTabs;
-
-

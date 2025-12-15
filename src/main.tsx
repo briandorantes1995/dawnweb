@@ -21,6 +21,14 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Maestro from "./layouts/Maestro";
 import NoPermission from "./views/NoPermission";
 import { Toaster } from "react-hot-toast";
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+  },
+});
 
 const container = document.getElementById("root");
 
@@ -31,11 +39,13 @@ const root = ReactDOM.createRoot(container);
 
 root.render(
   <React.StrictMode>
-    <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
-        <BrowserRouter>
-            <Toaster position="top-right" />
-          <Routes>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Provider store={store}>
+        <PersistGate loading={null} persistor={persistor}>
+          <BrowserRouter>
+              <Toaster position="top-right" />
+            <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />
 
@@ -59,8 +69,9 @@ root.render(
             <Route path="/no-permission" element={<NoPermission />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
-        </BrowserRouter>
-      </PersistGate>
-    </Provider>
+          </BrowserRouter>
+        </PersistGate>
+      </Provider>
+    </ThemeProvider>
   </React.StrictMode>
 );
