@@ -6,6 +6,7 @@ interface Props {
     user: any;
     tab: "active" | "inactive" | "pending";
     canDelete: boolean;
+    canDeactivate?: boolean;
     onApprove?: () => void;
     onActivate?: () => void;
     onDeactivate?: () => void;
@@ -14,7 +15,7 @@ interface Props {
     onAssignDriver?: () => void;
 }
 
-const UserActions: React.FC<Props> = ({user, tab, canDelete, onApprove, onActivate, onDeactivate, onChangeRole, onDelete, onAssignDriver}) => {
+const UserActions: React.FC<Props> = ({user, tab, canDelete, canDeactivate = true, onApprove, onActivate, onDeactivate, onChangeRole, onDelete, onAssignDriver}) => {
 
     const deleteButton = canDelete ? (
         <Button variant="danger" size="sm" onClick={onDelete}>
@@ -30,6 +31,20 @@ const UserActions: React.FC<Props> = ({user, tab, canDelete, onApprove, onActiva
         </OverlayTrigger>
     );
 
+    const deactivateButton = canDeactivate ? (
+        <Button variant="warning" size="sm" onClick={onDeactivate}>
+            Desactivar
+        </Button>
+    ) : (
+        <OverlayTrigger overlay={<Tooltip>No tienes permitido desactivar usuarios</Tooltip>}>
+            <span className="d-inline-block">
+                <Button variant="warning" size="sm" disabled style={{ pointerEvents: "none", opacity: 0.5 }}>
+                    Desactivar
+                </Button>
+            </span>
+        </OverlayTrigger>
+    );
+
     return (
         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
             {tab === "pending" && (
@@ -40,9 +55,7 @@ const UserActions: React.FC<Props> = ({user, tab, canDelete, onApprove, onActiva
 
             {tab === "active" && (
                 <>
-                    <Button variant="warning" size="sm" onClick={onDeactivate}>
-                        Desactivar
-                    </Button>
+                    {deactivateButton}
                     <Button variant="info" size="sm" onClick={onChangeRole}>
                         Cambiar rol
                     </Button>

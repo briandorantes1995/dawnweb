@@ -20,6 +20,7 @@ const UsersTabs: React.FC = () => {
   const { patch: patchApi, request } = useApi();
   const currentUserRole = useSelector((s: RootState) => s.auth.user?.roles?.[0]?.name);
   const canDelete = currentUserRole === "Maestro";
+  const canDeactivate = currentUserRole === "Maestro";
   const canAssignDriver = currentUserRole === "Admin" || currentUserRole === "Maestro";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +178,7 @@ const UsersTabs: React.FC = () => {
               user={user}
               tab={tab}
               canDelete={canDelete}
+              canDeactivate={canDeactivate}
               onApprove={async () => {
                 await approveUser(user.id);
                 toast.success("Usuario aprobado");
