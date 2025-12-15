@@ -14,7 +14,7 @@ export function useUserService() {
     return await get<UsersResponse>("/company/users");
   };
 
-  const updateMe = async (payload: { first_name?: string; last_name?: string; phone?: string; }): Promise<UpdateMeResponse> => {
+  const updateMe = async (payload: { first_name?: string; last_name?: string; phone?: string; contact?: "whatsapp" | "sms"; }): Promise<UpdateMeResponse> => {
     return patch("/users/me", payload);
   };
 

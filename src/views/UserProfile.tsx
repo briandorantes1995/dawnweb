@@ -7,6 +7,7 @@ import { Formik, Form as FormikForm, Field, ErrorMessage } from "formik";
 import { ProfileSchema } from "../validation/schema";
 import { useUserService } from "../api/users";
 import toast from "react-hot-toast";
+import { ContactType } from "../types/Contact";
 
 
 
@@ -21,6 +22,7 @@ const UserProfile: React.FC = () => {
     first_name: user.first_name || "",
     last_name: user.last_name || "",
     phone: user.phone || "",
+    contact: (user.contact || "sms") as ContactType,
   };
 
   const handleSubmit = async (values: typeof initialValues) => {
@@ -99,6 +101,23 @@ const UserProfile: React.FC = () => {
                                   }`}
                               />
                               <ErrorMessage name="phone" component="div" className="invalid-feedback" />
+                            </Form.Group>
+                          </Col>
+                        </Row>
+
+                        <Row>
+                          <Col md="6">
+                            <Form.Group>
+                              <label>Método de Contacto</label>
+                              <Field
+                                  name="contact"
+                                  as="select"
+                                  className="form-control"
+                              >
+                                <option value="sms">SMS</option>
+                                <option value="whatsapp">WhatsApp</option>
+                              </Field>
+                              <ErrorMessage name="contact" component="div" className="invalid-feedback" />
                             </Form.Group>
                           </Col>
                         </Row>

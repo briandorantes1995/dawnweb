@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { ContactType } from "../../types/Contact";
 
 export interface MemberRole {
   id: string;
@@ -28,6 +29,7 @@ export interface Member {
   pending_approval?: boolean;
   active?: boolean;
   phone: string;
+  contact?: ContactType;
   company_id?: string;
   roles: MemberRole[];
   company?: MemberCompany;
