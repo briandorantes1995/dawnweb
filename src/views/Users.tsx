@@ -188,6 +188,9 @@ const UsersTabs: React.FC = () => {
                 loadUsers();
               }}
               onDeactivate={async () => {
+                if (!window.confirm(`¿Estás seguro de que deseas desactivar al usuario ${user.first_name} ${user.last_name}?`)) {
+                  return;
+                }
                 await setActiveStatus(user.id, false);
                 toast.success("Usuario desactivado");
                 loadUsers();
@@ -197,6 +200,9 @@ const UsersTabs: React.FC = () => {
                 setShowChangeRoleModal(true);
               }}
               onDelete={async () => {
+                if (!window.confirm(`¿Estás seguro de que deseas eliminar al usuario ${user.first_name} ${user.last_name}? Esta acción no se puede deshacer.`)) {
+                  return;
+                }
                 await deleteUser(user.id);
                 toast.success("Usuario eliminado");
                 loadUsers();

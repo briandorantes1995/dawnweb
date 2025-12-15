@@ -1,5 +1,6 @@
 import React from "react";
-import { Button, ButtonGroup } from "react-bootstrap";
+import { Button } from "react-bootstrap";
+import { Box } from '@mui/material';
 
 interface Props {
   item: any;
@@ -21,7 +22,7 @@ const VehicleActions: React.FC<Props> = ({
   onUnassignDriver 
 }) => {
   return (
-    <ButtonGroup>
+    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
       {tab === "active" && (
         <>
           <Button size="sm" variant="warning" onClick={onDeactivate}>
@@ -57,7 +58,7 @@ const VehicleActions: React.FC<Props> = ({
           </Button>
         </>
       )}
-    </ButtonGroup>
+    </Box>
   );
 };
 

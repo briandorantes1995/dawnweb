@@ -1,5 +1,6 @@
 import React from "react";
-import { Button, OverlayTrigger, Tooltip, ButtonGroup } from "react-bootstrap";
+import { Button, OverlayTrigger, Tooltip } from "react-bootstrap";
+import { Box } from '@mui/material';
 
 interface Props {
     user: any;
@@ -13,7 +14,7 @@ interface Props {
     onAssignDriver?: () => void;
 }
 
-const UserActions: React.FC<Props> = ({user,tab, canDelete, onApprove, onActivate, onDeactivate, onChangeRole, onDelete, onAssignDriver,}) => {
+const UserActions: React.FC<Props> = ({user, tab, canDelete, onApprove, onActivate, onDeactivate, onChangeRole, onDelete, onAssignDriver}) => {
 
     const deleteButton = canDelete ? (
         <Button variant="danger" size="sm" onClick={onDelete}>
@@ -21,16 +22,16 @@ const UserActions: React.FC<Props> = ({user,tab, canDelete, onApprove, onActivat
         </Button>
     ) : (
         <OverlayTrigger overlay={<Tooltip>No tienes permitido borrar usuarios</Tooltip>}>
-      <span className="d-inline-block">
-        <Button variant="danger" size="sm" disabled style={{ pointerEvents: "none", opacity: 0.5 }}>
-          Eliminar
-        </Button>
-      </span>
+            <span className="d-inline-block">
+                <Button variant="danger" size="sm" disabled style={{ pointerEvents: "none", opacity: 0.5 }}>
+                    Eliminar
+                </Button>
+            </span>
         </OverlayTrigger>
     );
 
     return (
-        <ButtonGroup>
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
             {tab === "pending" && (
                 <Button variant="success" size="sm" onClick={onApprove}>
                     Aprobar
@@ -60,7 +61,7 @@ const UserActions: React.FC<Props> = ({user,tab, canDelete, onApprove, onActivat
                     {deleteButton}
                 </>
             )}
-        </ButtonGroup>
+        </Box>
     );
 };
 
