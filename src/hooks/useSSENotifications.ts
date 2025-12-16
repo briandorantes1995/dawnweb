@@ -6,7 +6,7 @@ import { addNotification } from "../store/slices/notificationsSlice";
 
 const MAX_RECONNECT_ATTEMPTS = 10;
 const MAX_DELAY = 30000; // 30 segundos
-const HEROKU_TIMEOUT = 25000; // 25 segundos - reconectar antes del timeout de Heroku (30s)
+const HEROKU_TIMEOUT = 28000; // 28 segundos - reconectar antes del timeout de Heroku (30s) pero más cerca del límite
 
 // Singleton global para SSE - solo una conexión activa en toda la app
 let activeReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
@@ -208,7 +208,8 @@ function startSSEConnection() {
 
                         // Manejar comentarios (keep-alive)
                         if (message.startsWith(":")) {
-                            // Keep-alive recibido, conexión está viva
+                            // Keep-alive recibido, conexión está viva - resetear timeout
+                            resetHerokuTimeout();
                             return;
                         }
 
