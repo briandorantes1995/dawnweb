@@ -6,6 +6,7 @@ import { addNotification } from "../store/slices/notificationsSlice";
 
 const MAX_RECONNECT_ATTEMPTS = 10;
 const MAX_DELAY = 30000; // 30 segundos
+const HEROKU_TIMEOUT = 25000; // 25 segundos - reconectar antes del timeout de Heroku (30s)
 
 export function useSSENotifications() {
     const { accessToken, refreshToken } = store.getState().auth;
@@ -79,26 +80,50 @@ export function useSSENotifications() {
                 const decoder = new TextDecoder();
                 let buffer = ""; // Buffer para manejar chunks parciales
                 let hasReceivedData = false;
+                let lastActivity = Date.now();
+
+                // Timeout para reconectar antes de que Heroku cierre la conexión
+                let herokuTimeout: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+                    if (!isClosed.current) {
+                        console.log("⏰ Timeout preventivo de Heroku (25s), reconectando...");
+                        reader.cancel();
+                        reconnectAttempts.current = 0; // Reset porque es preventivo
+                        connect();
+                    }
+                }, HEROKU_TIMEOUT);
+                
+                const resetHerokuTimeout = () => {
+                    if (herokuTimeout) clearTimeout(herokuTimeout);
+                    herokuTimeout = setTimeout(() => {
+                        if (!isClosed.current) {
+                            console.log("⏰ Timeout preventivo de Heroku, reconectando...");
+                            reader.cancel();
+                            reconnectAttempts.current = 0;
+                            connect();
+                        }
+                    }, HEROKU_TIMEOUT);
+                };
 
                 console.log("📖 Iniciando lectura del stream SSE...");
 
                 const read = async () => {
                     if (isClosed.current) {
-                        console.log("🛑 Conexión SSE marcada como cerrada, cancelando reader...");
+                        if (herokuTimeout) clearTimeout(herokuTimeout);
                         reader.cancel();
                         return;
                     }
 
                     try {
-                        console.log("⏳ Esperando datos del stream...");
                         const { value, done } = await reader.read();
 
                         if (done) {
-                            console.log("🔚 Stream cerrado. Has recibido datos:", hasReceivedData, "Buffer:", buffer.length, "bytes");
+                            if (herokuTimeout) clearTimeout(herokuTimeout);
+                            const timeOpen = Date.now() - lastActivity;
+                            console.log("🔚 Stream cerrado. Tiempo abierto:", Math.round(timeOpen / 1000), "s. Datos recibidos:", hasReceivedData);
                             
                             // Si el buffer tiene contenido, procesarlo antes de cerrar
                             if (buffer.trim()) {
-                                console.log("📥 Procesando buffer final antes de cierre:", buffer);
+                                console.log("📥 Procesando buffer final:", buffer.substring(0, 200));
                                 // Procesar el buffer restante
                                 const messages = buffer.split("\n\n");
                                 messages.forEach((message) => {
@@ -126,26 +151,24 @@ export function useSSENotifications() {
                                     }
                                 });
                             }
-                            if (!hasReceivedData) {
-                                console.warn("⚠️ SSE cerrado por servidor SIN enviar datos. El servidor puede estar cerrando conexiones inactivas.");
-                            } else {
-                                console.warn("⚠️ SSE cerrado por servidor después de recibir datos.");
+                            if (!hasReceivedData && timeOpen < 5000) {
+                                // Si se cerró muy rápido (< 5s), probablemente es Heroku o un error del servidor
+                                console.warn("⚠️ SSE cerrado muy rápido (" + Math.round(timeOpen / 1000) + "s). Probable timeout de Heroku o error del servidor.");
+                            } else if (!hasReceivedData) {
+                                console.warn("⚠️ SSE cerrado sin datos después de", Math.round(timeOpen / 1000), "s");
                             }
+                            
                             reconnectAttempts.current++;
-                            
-                            // Si no recibimos datos, esperar un poco más antes de reconectar
-                            if (!hasReceivedData && reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
-                                console.log("⏸️ Esperando 5s adicionales antes de reconectar (servidor puede estar rechazando conexiones)...");
-                                await new Promise((r) => setTimeout(r, 5000));
-                            }
-                            
                             return connect();
                         }
 
                         // Decodificar y agregar al buffer
                         const chunk = decoder.decode(value, { stream: true });
                         hasReceivedData = true;
-                        console.log("📦 Chunk recibido (" + chunk.length + " bytes):", chunk.substring(0, 100) + (chunk.length > 100 ? "..." : ""));
+                        lastActivity = Date.now();
+                        
+                        // Resetear timeout de Heroku si recibimos datos
+                        resetHerokuTimeout();
                         
                         buffer += chunk;
 
@@ -153,18 +176,13 @@ export function useSSENotifications() {
                         const messages = buffer.split("\n\n");
                         // Mantener el último mensaje incompleto en el buffer
                         buffer = messages.pop() || "";
-                        
-                        console.log("📊 Mensajes completos encontrados:", messages.length, "Buffer restante:", buffer.length, "bytes");
 
                         messages.forEach((message) => {
                             if (!message.trim()) return; // Ignorar mensajes vacíos
 
-                            // Log raw para debugging
-                            console.log("📥 SSE raw:", message);
-
                             // Manejar comentarios (keep-alive)
                             if (message.startsWith(":")) {
-                                console.log("💓 SSE keep-alive recibido");
+                                // Keep-alive recibido, conexión está viva
                                 return;
                             }
 
@@ -201,7 +219,7 @@ export function useSSENotifications() {
                                     });
                                 }
 
-                                console.log("📨 SSE recibido:", data);
+                                console.log("📨 Notificación SSE:", data.type, "-", data.message);
 
                             } catch (err) {
                                 console.error("Error parseando SSE JSON:", err, "Data:", dataLine);
@@ -210,7 +228,8 @@ export function useSSENotifications() {
 
                         await read(); // continuar escuchando
                     } catch (error) {
-                        console.error("Error leyendo SSE:", error);
+                        if (herokuTimeout) clearTimeout(herokuTimeout);
+                        console.error("❌ Error leyendo SSE:", error);
                         reconnectAttempts.current++;
                         connect();
                     }
