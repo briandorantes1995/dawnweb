@@ -37,7 +37,6 @@ function startSSEConnection() {
 
         // Si ya hay otra conexión activa, cancelar esta
         if (activeReader) {
-            console.log("⚠️ Ya hay una conexión SSE activa, cancelando...");
             isConnecting = false;
             return;
         }
@@ -53,30 +52,17 @@ function startSSEConnection() {
 
         if (attempt > 0) {
             const delay = Math.min(1000 * 2 ** attempt, MAX_DELAY);
-            console.log(`⏳ Reintentando SSE en ${delay / 1000}s... (intento ${attempt}/${MAX_RECONNECT_ATTEMPTS})`);
             await new Promise((r) => setTimeout(r, delay));
         }
 
         try {
-            console.log("🔌 Conectando SSE... (intento", globalReconnectAttempts + 1, ")");
-
             const res = await apiFetchSSE("/events", {}, accessToken, refreshToken);
-
-            console.log("✅ Respuesta SSE recibida, status:", res.status);
 
             // Verificar headers SSE
             const contentType = res.headers.get("content-type");
-            console.log("📋 SSE Headers:", {
-                "content-type": contentType,
-                "cache-control": res.headers.get("cache-control"),
-                "connection": res.headers.get("connection"),
-                status: res.status,
-                statusText: res.statusText,
-                "transfer-encoding": res.headers.get("transfer-encoding")
-            });
 
             if (!contentType?.includes("text/event-stream")) {
-                console.warn("⚠️ El servidor no está enviando SSE. Content-Type:", contentType);
+                console.error("❌ Error: El servidor no está enviando SSE. Content-Type:", contentType);
                 globalReconnectAttempts = MAX_RECONNECT_ATTEMPTS;
                 isConnecting = false;
                 return;
@@ -89,11 +75,13 @@ function startSSEConnection() {
                 return connect();
             }
 
+            console.log("✅ SSE conectado");
+
             globalReconnectAttempts = 0; // reset backoff
             isConnecting = false;
 
             if (!res.body) {
-                console.warn("⚠️ SSE sin body, intentando reconectar…");
+                console.error("❌ Error: SSE sin body");
                 globalReconnectAttempts++;
                 return connect();
             }
@@ -109,7 +97,6 @@ function startSSEConnection() {
             // Timeout para reconectar antes de que Heroku cierre la conexión
             globalHerokuTimeout = setTimeout(() => {
                 if (!globalIsClosed && activeReader === reader) {
-                    console.log("⏰ Timeout preventivo de Heroku (25s), reconectando...");
                     reader.cancel().catch(() => {});
                     activeReader = null;
                     globalReconnectAttempts = 0; // Reset porque es preventivo
@@ -121,7 +108,6 @@ function startSSEConnection() {
                 if (globalHerokuTimeout) clearTimeout(globalHerokuTimeout);
                 globalHerokuTimeout = setTimeout(() => {
                     if (!globalIsClosed && activeReader === reader) {
-                        console.log("⏰ Timeout preventivo de Heroku, reconectando...");
                         reader.cancel().catch(() => {});
                         activeReader = null;
                         globalReconnectAttempts = 0;
@@ -129,8 +115,6 @@ function startSSEConnection() {
                     }
                 }, HEROKU_TIMEOUT);
             };
-
-            console.log("📖 Iniciando lectura del stream SSE...");
 
             const read = async () => {
                 if (globalIsClosed || activeReader !== reader) {
@@ -150,12 +134,9 @@ function startSSEConnection() {
                         if (activeReader === reader) {
                             activeReader = null;
                         }
-                        const timeOpen = Date.now() - lastActivity;
-                        console.log("🔚 Stream cerrado. Tiempo abierto:", Math.round(timeOpen / 1000), "s. Datos recibidos:", hasReceivedData);
                         
                         // Si el buffer tiene contenido, procesarlo antes de cerrar
                         if (buffer.trim()) {
-                            console.log("📥 Procesando buffer final:", buffer.substring(0, 200));
                             const messages = buffer.split("\n\n");
                             messages.forEach((message) => {
                                 if (!message.trim()) return;
@@ -177,7 +158,7 @@ function startSSEConnection() {
                                                 });
                                             }
                                         } catch (err) {
-                                            console.error("Error parseando buffer final:", err);
+                                            console.error("❌ Error parseando buffer final:", err);
                                         }
                                     }
                                 }
@@ -229,7 +210,6 @@ function startSSEConnection() {
                         }
 
                         if (!dataLine) {
-                            console.warn("⚠️ Mensaje SSE sin línea 'data:', ignorando:", message);
                             return;
                         }
 
@@ -246,8 +226,6 @@ function startSSEConnection() {
                                     duration: 3000
                                 });
                             }
-
-                            console.log("📨 Notificación SSE:", data.type, "-", data.message);
 
                         } catch (err) {
                             console.error("Error parseando SSE JSON:", err, "Data:", dataLine);
