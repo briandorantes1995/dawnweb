@@ -37,9 +37,11 @@ export function useSSENotifications() {
             }
 
             try {
-                console.log("🔌 Conectando SSE...");
+                console.log("🔌 Conectando SSE... (intento", reconnectAttempts.current + 1, ")");
 
                 const res = await apiFetchSSE("/events", {}, accessToken, refreshToken);
+
+                console.log("✅ Respuesta SSE recibida, status:", res.status);
 
                 // Verificar headers SSE
                 const contentType = res.headers.get("content-type");
@@ -48,7 +50,8 @@ export function useSSENotifications() {
                     "cache-control": res.headers.get("cache-control"),
                     "connection": res.headers.get("connection"),
                     status: res.status,
-                    statusText: res.statusText
+                    statusText: res.statusText,
+                    "transfer-encoding": res.headers.get("transfer-encoding")
                 });
 
                 if (!contentType?.includes("text/event-stream")) {
@@ -75,17 +78,24 @@ export function useSSENotifications() {
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = ""; // Buffer para manejar chunks parciales
+                let hasReceivedData = false;
+
+                console.log("📖 Iniciando lectura del stream SSE...");
 
                 const read = async () => {
                     if (isClosed.current) {
+                        console.log("🛑 Conexión SSE marcada como cerrada, cancelando reader...");
                         reader.cancel();
                         return;
                     }
 
                     try {
+                        console.log("⏳ Esperando datos del stream...");
                         const { value, done } = await reader.read();
 
                         if (done) {
+                            console.log("🔚 Stream cerrado. Has recibido datos:", hasReceivedData, "Buffer:", buffer.length, "bytes");
+                            
                             // Si el buffer tiene contenido, procesarlo antes de cerrar
                             if (buffer.trim()) {
                                 console.log("📥 Procesando buffer final antes de cierre:", buffer);
@@ -116,18 +126,35 @@ export function useSSENotifications() {
                                     }
                                 });
                             }
-                            console.warn("⚠️ SSE cerrado por servidor.");
+                            if (!hasReceivedData) {
+                                console.warn("⚠️ SSE cerrado por servidor SIN enviar datos. El servidor puede estar cerrando conexiones inactivas.");
+                            } else {
+                                console.warn("⚠️ SSE cerrado por servidor después de recibir datos.");
+                            }
                             reconnectAttempts.current++;
+                            
+                            // Si no recibimos datos, esperar un poco más antes de reconectar
+                            if (!hasReceivedData && reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
+                                console.log("⏸️ Esperando 5s adicionales antes de reconectar (servidor puede estar rechazando conexiones)...");
+                                await new Promise((r) => setTimeout(r, 5000));
+                            }
+                            
                             return connect();
                         }
 
                         // Decodificar y agregar al buffer
-                        buffer += decoder.decode(value, { stream: true });
+                        const chunk = decoder.decode(value, { stream: true });
+                        hasReceivedData = true;
+                        console.log("📦 Chunk recibido (" + chunk.length + " bytes):", chunk.substring(0, 100) + (chunk.length > 100 ? "..." : ""));
+                        
+                        buffer += chunk;
 
                         // Procesar mensajes completos (separados por \n\n)
                         const messages = buffer.split("\n\n");
                         // Mantener el último mensaje incompleto en el buffer
                         buffer = messages.pop() || "";
+                        
+                        console.log("📊 Mensajes completos encontrados:", messages.length, "Buffer restante:", buffer.length, "bytes");
 
                         messages.forEach((message) => {
                             if (!message.trim()) return; // Ignorar mensajes vacíos
