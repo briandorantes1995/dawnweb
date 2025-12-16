@@ -8,11 +8,15 @@ const MAX_RECONNECT_ATTEMPTS = 10;
 const MAX_DELAY = 30000; // 30 segundos
 const HEROKU_TIMEOUT = 25000; // 25 segundos - reconectar antes del timeout de Heroku (30s)
 
+// Variable global para prevenir múltiples conexiones SSE simultáneas
+let activeReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+
 export function useSSENotifications() {
     const { accessToken, refreshToken } = store.getState().auth;
     const { muteNotifications } = store.getState().ui;
     const reconnectAttempts = useRef(0);
     const isClosed = useRef(false);
+    const currentReader = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
 
     useEffect(() => {
         if (!accessToken) return;
@@ -22,6 +26,13 @@ export function useSSENotifications() {
 
         const connect = async () => {
             if (isClosed.current) return;
+
+            // Prevenir múltiples conexiones simultáneas
+            if (activeReader) {
+                console.log("⚠️ Ya hay una conexión SSE activa, cancelando conexión anterior...");
+                activeReader.cancel().catch(() => {});
+                activeReader = null;
+            }
 
             // Limitar reintentos
             if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
@@ -77,6 +88,9 @@ export function useSSENotifications() {
                 }
 
                 const reader = res.body.getReader();
+                currentReader.current = reader;
+                activeReader = reader;
+                
                 const decoder = new TextDecoder();
                 let buffer = ""; // Buffer para manejar chunks parciales
                 let hasReceivedData = false;
@@ -107,9 +121,13 @@ export function useSSENotifications() {
                 console.log("📖 Iniciando lectura del stream SSE...");
 
                 const read = async () => {
-                    if (isClosed.current) {
+                    if (isClosed.current || activeReader !== reader) {
                         if (herokuTimeout) clearTimeout(herokuTimeout);
-                        reader.cancel();
+                        reader.cancel().catch(() => {});
+                        if (activeReader === reader) {
+                            activeReader = null;
+                        }
+                        currentReader.current = null;
                         return;
                     }
 
@@ -118,6 +136,10 @@ export function useSSENotifications() {
 
                         if (done) {
                             if (herokuTimeout) clearTimeout(herokuTimeout);
+                            if (activeReader === reader) {
+                                activeReader = null;
+                            }
+                            currentReader.current = null;
                             const timeOpen = Date.now() - lastActivity;
                             console.log("🔚 Stream cerrado. Tiempo abierto:", Math.round(timeOpen / 1000), "s. Datos recibidos:", hasReceivedData);
                             
@@ -229,6 +251,10 @@ export function useSSENotifications() {
                         await read(); // continuar escuchando
                     } catch (error) {
                         if (herokuTimeout) clearTimeout(herokuTimeout);
+                        if (activeReader === reader) {
+                            activeReader = null;
+                        }
+                        currentReader.current = null;
                         console.error("❌ Error leyendo SSE:", error);
                         reconnectAttempts.current++;
                         connect();
@@ -248,6 +274,14 @@ export function useSSENotifications() {
 
         return () => {
             isClosed.current = true;
+            if (currentReader.current) {
+                currentReader.current.cancel().catch(() => {});
+                currentReader.current = null;
+            }
+            if (activeReader) {
+                activeReader.cancel().catch(() => {});
+                activeReader = null;
+            }
         };
 
     }, [accessToken, refreshToken, muteNotifications]);
