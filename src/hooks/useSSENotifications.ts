@@ -43,8 +43,19 @@ export function useSSENotifications() {
 
                 // Verificar headers SSE
                 const contentType = res.headers.get("content-type");
+                console.log("📋 SSE Headers:", {
+                    "content-type": contentType,
+                    "cache-control": res.headers.get("cache-control"),
+                    "connection": res.headers.get("connection"),
+                    status: res.status,
+                    statusText: res.statusText
+                });
+
                 if (!contentType?.includes("text/event-stream")) {
                     console.warn("⚠️ El servidor no está enviando SSE. Content-Type:", contentType);
+                    // No reconectar si el Content-Type es incorrecto, podría ser un error del servidor
+                    reconnectAttempts.current = MAX_RECONNECT_ATTEMPTS;
+                    return;
                 }
 
                 if (!res.ok) {
@@ -63,6 +74,7 @@ export function useSSENotifications() {
 
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();
+                let buffer = ""; // Buffer para manejar chunks parciales
 
                 const read = async () => {
                     if (isClosed.current) {
@@ -74,35 +86,98 @@ export function useSSENotifications() {
                         const { value, done } = await reader.read();
 
                         if (done) {
+                            // Si el buffer tiene contenido, procesarlo antes de cerrar
+                            if (buffer.trim()) {
+                                console.log("📥 Procesando buffer final antes de cierre:", buffer);
+                                // Procesar el buffer restante
+                                const messages = buffer.split("\n\n");
+                                messages.forEach((message) => {
+                                    if (!message.trim()) return;
+                                    const lines = message.split("\n");
+                                    for (const line of lines) {
+                                        if (line.startsWith("data: ") || line.startsWith("data:")) {
+                                            const dataLine = line.startsWith("data: ") 
+                                                ? line.substring(6) 
+                                                : line.substring(5).trim();
+                                            try {
+                                                const data = JSON.parse(dataLine);
+                                                store.dispatch(addNotification({ type: data.type, message: data.message }));
+                                                if (!muteNotifications) {
+                                                    toast(data.message || "Nueva notificación", {
+                                                        icon: "🔔",
+                                                        position: "top-right",
+                                                        duration: 3000
+                                                    });
+                                                }
+                                            } catch (err) {
+                                                console.error("Error parseando buffer final:", err);
+                                            }
+                                        }
+                                    }
+                                });
+                            }
                             console.warn("⚠️ SSE cerrado por servidor.");
                             reconnectAttempts.current++;
                             return connect();
                         }
 
-                        const text = decoder.decode(value, { stream: true });
+                        // Decodificar y agregar al buffer
+                        buffer += decoder.decode(value, { stream: true });
 
-                        text.split("\n\n").forEach((chunk) => {
-                            if (chunk.startsWith("data: ")) {
-                                const json = chunk.replace("data: ", "");
+                        // Procesar mensajes completos (separados por \n\n)
+                        const messages = buffer.split("\n\n");
+                        // Mantener el último mensaje incompleto en el buffer
+                        buffer = messages.pop() || "";
 
-                                try {
-                                    const data = JSON.parse(json);
+                        messages.forEach((message) => {
+                            if (!message.trim()) return; // Ignorar mensajes vacíos
 
-                                    store.dispatch(addNotification({ type: data.type, message: data.message }));
+                            // Log raw para debugging
+                            console.log("📥 SSE raw:", message);
 
-                                    if (!muteNotifications) {
-                                        toast(data.message || "Nueva notificación", {
-                                            icon: "🔔",
-                                            position: "top-right",
-                                            duration: 3000
-                                        });
-                                    }
+                            // Manejar comentarios (keep-alive)
+                            if (message.startsWith(":")) {
+                                console.log("💓 SSE keep-alive recibido");
+                                return;
+                            }
 
-                                    console.log("📨 SSE recibido:", data);
+                            // Buscar línea "data: "
+                            const lines = message.split("\n");
+                            let dataLine = "";
 
-                                } catch (err) {
-                                    console.error("Error parseando SSE:", err);
+                            for (const line of lines) {
+                                if (line.startsWith("data: ")) {
+                                    dataLine = line.substring(6); // Remover "data: "
+                                    break;
+                                } else if (line.startsWith("data:")) {
+                                    // Algunos servidores no tienen espacio después de "data:"
+                                    dataLine = line.substring(5).trim();
+                                    break;
                                 }
+                            }
+
+                            if (!dataLine) {
+                                console.warn("⚠️ Mensaje SSE sin línea 'data:', ignorando:", message);
+                                return;
+                            }
+
+                            try {
+                                const data = JSON.parse(dataLine);
+
+                                store.dispatch(addNotification({ type: data.type, message: data.message }));
+
+                                if (!muteNotifications) {
+                                    toast(data.message || "Nueva notificación", {
+                                        icon: "🔔",
+                                        position: "top-right",
+                                        duration: 3000
+                                    });
+                                }
+
+                                console.log("📨 SSE recibido:", data);
+
+                            } catch (err) {
+                                console.error("Error parseando SSE JSON:", err, "Data:", dataLine);
                             }
                         });
 
